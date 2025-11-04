@@ -1,0 +1,689 @@
+<!-- src/features/task-cards/pages/TaskCardsPage.vue -->
+<script setup lang="ts">
+defineOptions({ name: 'TaskCardsPage' })
+
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, onBeforeRouteLeave } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+
+import PageHeader from '@/shared/components/PageHeader.vue'
+
+/** Stores */
+import { useTaskCatalogStore } from '@/features/task-cards/stores/taskCatalog.store'
+import { useTaskSessionStore } from '@/features/task-cards/stores/taskSession.store'
+import { useRewardTokensStore } from '@/features/reward/stores/rewardTokens.store'
+
+/** analytics：完成后交给奖励编排器弹窗与落库 */
+import { logTaskCompleted } from '@/app/analytics'
+import { LS } from '@/shared/constants/ls-keys'
+
+/* -------------------------------- 实例 -------------------------------- */
+const router = useRouter()
+const catalog = useTaskCatalogStore()
+const session = useTaskSessionStore()
+const wallet = useRewardTokensStore()
+
+/* ============================== 抽卡动画占位（留坑） ============================== */
+const animEnabled = ref(false)
+const isAnimating = ref(false)
+const animKind = ref<'draw' | 'reroll' | null>(null)
+const animContext = ref<Record<string, any> | null>(null)
+async function queueAnim(kind: 'draw' | 'reroll', ctx: Record<string, any>) {
+  animKind.value = kind
+  animContext.value = ctx
+  isAnimating.value = true
+  try {
+    await Promise.resolve()
+  } finally {
+    isAnimating.value = false
+    animKind.value = null
+    animContext.value = null
+  }
+}
+
+/* ============================== 严格倒计时（不可暂停） ============================== */
+/** 本地持久化键 */
+const LS_KEY = LS.taskTimer
+type PersistState = {
+  taskKey: string
+  duration: number
+  startAt: number | null
+  /** 到点标志，避免“到点后刷新又回满” */
+  doneAt: number | null
+}
+const persistRef = ref<PersistState | null>(null)
+
+const task = computed(() => session.session.current)
+const totalSec = computed(() => (task.value ? task.value.minutes * 60 : 0))
+const secLeft = ref(0)
+
+/** 新增：对话框可见性（抽到成功 / 换卡成功 / 完成失败 / 到点） */
+const drawDialog = ref(false)
+const rerollDialog = ref(false)
+const rerollLeftText = ref('')
+const finishErrorDialog = ref(false)
+const finishErrorText = ref('')
+const timeupDialog = ref(false) // 到点弹窗（移动端样式）
+
+/** 以 task.id 为主键，防止不同任务串计时 */
+const currentTaskKey = () => {
+  const t = task.value
+  if (!t) return ''
+  const tag = (t.typeTag || catalog.selectedTaskType || '').trim()
+  return `${t.id}__${t.minutes}__${tag}`
+}
+
+const isRunning = computed(() => {
+  const p = persistRef.value
+  return !!(p && p.taskKey === currentTaskKey() && p.startAt)
+})
+// 仍保留：便于提示文案
+const canFinishBtn = computed(() => session.canFinish && secLeft.value === 0 && !!task.value)
+
+/** 可读时间与进度 */
+const timeText = computed(() => {
+  const s = Math.max(0, secLeft.value)
+  const m = Math.floor(s / 60)
+  const ss = String(s % 60).padStart(2, '0')
+  return `${m}:${ss}`
+})
+const progress = computed(() => {
+  if (!totalSec.value) return 0
+  const done = Math.max(0, totalSec.value - secLeft.value)
+  return Math.min(100, Math.round((done / totalSec.value) * 100))
+})
+
+/** 读/写持久化 */
+function loadPersist(): PersistState | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    persistRef.value = raw
+      ? ({ doneAt: null, ...JSON.parse(raw) } as PersistState) // 兼容旧数据
+      : null
+    return persistRef.value
+  } catch {
+    persistRef.value = null
+    return null
+  }
+}
+function savePersist(p: PersistState) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(p))
+    persistRef.value = p
+  } catch {}
+}
+function clearPersist() {
+  try {
+    localStorage.removeItem(LS_KEY)
+  } catch {}
+  persistRef.value = null
+}
+
+/** 计时驱动 */
+let tickId: number | null = null
+function startTick() {
+  if (!tickId) tickId = window.setInterval(recomputeLeftFromNow, 1000)
+}
+function clearTick() {
+  if (tickId) {
+    clearInterval(tickId)
+    tickId = null
+  }
+}
+function recomputeLeftFromNow() {
+  const p = persistRef.value
+  if (!p || p.taskKey !== currentTaskKey()) return
+  if (!p.startAt) {
+    if (p.doneAt) {
+      secLeft.value = 0
+      clearTick()
+      return
+    }
+    secLeft.value = p.duration
+    clearTick()
+    return
+  }
+  const left = Math.max(0, p.duration - Math.floor((Date.now() - p.startAt) / 1000))
+  secLeft.value = left
+  if (left === 0) {
+    // 到点：停止计时但不自动完成，弹中置对话框（移动端样式）
+    savePersist({ ...p, startAt: null, doneAt: Date.now() })
+    clearTick()
+    timeupDialog.value = true
+  }
+}
+
+/** 初始化/重置/开始 */
+function resetTimerForCurrentTask() {
+  const key = currentTaskKey()
+  if (!key) {
+    clearPersist()
+    secLeft.value = 0
+    clearTick()
+    timeupDialog.value = false
+    return
+  }
+  const duration = totalSec.value
+  savePersist({ taskKey: key, duration, startAt: null, doneAt: null })
+  secLeft.value = duration
+  clearTick()
+  timeupDialog.value = false
+}
+function hydrateTimerFromStorage() {
+  const key = currentTaskKey()
+  if (!key) {
+    secLeft.value = 0
+    clearTick()
+    timeupDialog.value = false
+    return
+  }
+  const p = persistRef.value
+  if (!p || p.taskKey !== key || p.duration !== totalSec.value) {
+    resetTimerForCurrentTask()
+    return
+  }
+  if (p.startAt) {
+    startTick()
+    recomputeLeftFromNow()
+  } else {
+    if (p.doneAt) {
+      secLeft.value = 0
+      timeupDialog.value = true
+      clearTick()
+    } else {
+      secLeft.value = p.duration
+      clearTick()
+    }
+  }
+}
+function startTimer() {
+  const key = currentTaskKey()
+  if (!key || isRunning.value || secLeft.value === 0) return
+  // 开始计时前，若可接受则隐式接受，锁定换卡
+  if (session.canAccept) {
+    const r = session.accept()
+    if (!r.ok) {
+      ElMessage.warning('无法进入执行状态')
+      return
+    }
+  }
+  const duration = totalSec.value
+  savePersist({ taskKey: key, duration, startAt: Date.now(), doneAt: null })
+  startTick()
+  recomputeLeftFromNow()
+}
+
+/* ============================== 返回扣费/拦截（强制版） ============================== */
+onBeforeRouteLeave(async (_to, _from, next) => {
+  const needCharge = session.shouldChargeOnExit
+  if (!needCharge) return next()
+
+  const ok = await ElMessageBox.confirm(
+    `返回将消耗 1 张贴纸（当前持有：${wallet.balance}）。确认要返回吗？`,
+    '返回前确认',
+    {
+      type: 'warning',
+      confirmButtonText: '仍要返回（消耗/记欠费 1 ）',
+      cancelButtonText: '继续留在此页',
+    }
+  )
+    .then(() => true)
+    .catch(() => false)
+
+  if (!ok) return next(false)
+
+  const r = session.chargeExit()
+  if (!r.ok && r.reason === 'insufficient_tokens') {
+    try {
+      session.recordExitDebt()
+      ElMessage.info('余额不足，已记欠费 1 张贴纸')
+    } catch {}
+  }
+  next()
+})
+
+/* ============================== 页面交互：抽卡/换卡/完成 ============================== */
+const stickerBalance = computed(() => wallet.balance)
+const canDrawBtn = computed(() => session.canDraw && !isAnimating.value)
+const canRerollBtn = computed(
+  () =>
+    session.canReroll &&
+    stickerBalance.value >= session.session.rerollCostToken &&
+    !isAnimating.value
+)
+
+async function draw() {
+  if (!catalog.selectedTaskType) {
+    return router.replace({ name: 'home.tasks', query: { redirect: '/home/tasks/card' } })
+  }
+  const res = session.draw()
+  if (!res.ok) {
+    const map: Record<string, string> = {
+      active_session: '当前已有进行中的任务卡，请先完成或放弃',
+      empty_pool: '此类型任务池为空，请先添加任务或更换类型',
+    }
+    return ElMessage.warning(map[res.reason ?? ''] || '抽卡失败，请重试')
+  }
+
+  resetTimerForCurrentTask() // 抽到卡后准备计时（但不自动开始）
+
+  if (animEnabled.value) {
+    await queueAnim('draw', {
+      sessionId: session.session.id,
+      poolSize: catalog.allPool.length,
+      taskId: task.value?.id,
+    })
+  }
+
+  drawDialog.value = true
+}
+
+async function reroll() {
+  if (!canRerollBtn.value) {
+    if (!session.canReroll) return ElMessage.info('当前不在可换卡状态')
+    if (wallet.balance < session.session.rerollCostToken)
+      return ElMessage.warning('需要 1 张贴纸才能换卡')
+    return
+  }
+
+  const ok = await ElMessageBox.confirm(
+    `换一张将消耗 1 张贴纸（当前持有：${wallet.balance}）。确认要换吗？`,
+    '确认换卡',
+    { type: 'warning', confirmButtonText: '确认换卡', cancelButtonText: '取消' }
+  )
+    .then(() => true)
+    .catch(() => false)
+  if (!ok) return
+
+  const beforeId = task.value?.id
+  const res = session.reroll()
+  if (!res.ok) {
+    const map: Record<string, string> = {
+      not_in_drawn: '当前不在抽卡状态，无法更换',
+      reroll_exhausted: '换卡次数已用完',
+      pool_depleted: '今日该类型的任务都抽过了，无法再换',
+      insufficient_tokens: '需要 1 张贴纸才能换卡',
+      token_spend_failed: '扣贴纸失败，请重试',
+    }
+    return ElMessage.warning(map[res.reason ?? ''] || '换卡失败，请重试')
+  }
+
+  resetTimerForCurrentTask() // 新卡 → 重置计时
+
+  rerollLeftText.value = `剩 ${session.rerollLeft}`
+  rerollDialog.value = true
+
+  if (animEnabled.value) {
+    await queueAnim('reroll', {
+      sessionId: session.session.id,
+      fromId: beforeId,
+      toId: task.value?.id,
+      left: session.rerollLeft,
+    })
+  }
+}
+
+/** 完成入口（由到点弹窗按钮触发） */
+function finishTask() {
+  const r = session.finish()
+  if (!r.ok) {
+    const map: Record<string, string> = {
+      already_completed: '本任务已完成',
+      not_accepted: '请先接受任务再完成',
+    }
+
+    finishErrorText.value = map[r.reason ?? ''] || '完成失败'
+    finishErrorDialog.value = true
+    return
+  }
+
+  clearPersist()
+  clearTick()
+  timeupDialog.value = false
+
+  const id = task.value?.id
+  logTaskCompleted({
+    ...(id != null ? { taskId: String(id) } : {}),
+    title: task.value?.title,
+    source: 'user',
+  })
+}
+
+/* ============================== 生命周期 & 监听 ============================== */
+onMounted(() => {
+  session.rehydrateActive()
+  // 进入时先结清欠费（如果有）
+  const beforeDebt = wallet.exitDebt
+  const settle = session.settleExitDebt()
+  if (!settle.ok && settle.leftDebt > 0) {
+    ElMessage.warning(`你有 ${settle.leftDebt} 张贴纸欠费未结清`)
+  } else if (beforeDebt > 0) {
+    ElMessage.success(`已自动结清 ${beforeDebt} 张贴纸欠费`)
+  }
+
+  // 然后再恢复倒计时（依赖于当前 task）
+  loadPersist()
+  hydrateTimerFromStorage()
+
+  document.addEventListener('visibilitychange', onVisibility, { passive: true })
+  window.addEventListener('storage', onStorage)
+  window.addEventListener('beforeunload', onBeforeUnload)
+})
+onUnmounted(() => {
+  clearTick()
+  document.removeEventListener('visibilitychange', onVisibility)
+  window.removeEventListener('storage', onStorage)
+  window.removeEventListener('beforeunload', onBeforeUnload)
+})
+function onVisibility() {
+  if (document.visibilityState === 'visible') recomputeLeftFromNow()
+}
+function onStorage(e: StorageEvent) {
+  if (e.key === LS_KEY) {
+    loadPersist()
+    hydrateTimerFromStorage()
+  }
+}
+function onBeforeUnload() {
+  try {
+    // 直到完成前离开都要付费：强退视作欠费 +1
+    session.recordExitDebt()
+  } catch {}
+}
+
+/** 抽/换后 task 变化 → 重置计时器（兜底） */
+watch(
+  () => task.value?.id,
+  () => resetTimerForCurrentTask()
+)
+watch(
+  () => task.value?.minutes,
+  () => resetTimerForCurrentTask()
+)
+
+/** 切换选中类型 → 清掉当前卡与计时器（通常来自类型页返回） */
+watch(
+  () => catalog.selectedTaskType,
+  () => {
+    if (session.session.state !== 'IDLE') {
+      clearPersist()
+      secLeft.value = 0
+      clearTick()
+      timeupDialog.value = false
+    }
+  }
+)
+</script>
+
+<template>
+  <div class="m-page">
+    <PageHeader title="任务抽卡">
+      <template #extra>
+        <el-tag type="warning" round>贴纸余额：{{ wallet.balance }}</el-tag>
+      </template>
+    </PageHeader>
+
+    <!-- 抽卡前：规则提示（常驻） -->
+    <div v-if="session.canDraw" class="rule-tip">
+      ⚠️ 抽卡以后，在完成前，换卡或退出都会消耗 1 张贴纸。
+    </div>
+
+    <!-- 操作区：抽卡 / 换卡 -->
+    <div class="m-actions">
+      <el-button
+        type="primary"
+        size="large"
+        round
+        class="m-btn"
+        :disabled="!session.canDraw || isAnimating"
+        @click="draw"
+        >抽卡</el-button
+      >
+
+      <el-button
+        size="large"
+        round
+        class="m-btn"
+        :disabled="
+          !session.canReroll || wallet.balance < session.session.rerollCostToken || isAnimating
+        "
+        @click="reroll"
+        >换一张（剩 {{ session.rerollLeft }}）</el-button
+      >
+
+      <div
+        v-if="session.canReroll && wallet.balance < session.session.rerollCostToken"
+        class="hint-center"
+      >
+        换卡需消耗 1 张贴纸，你当前没有贴纸
+      </div>
+    </div>
+
+    <!-- 当前任务卡 + 计时器 -->
+    <section class="card-host">
+      <div class="anim-host" data-anim-host="task-card">
+        <el-card v-if="task" class="m-card" shadow="hover">
+          <h3 class="card-title">{{ task.title }}</h3>
+          <p class="meta">
+            <el-tag size="small" effect="plain">{{
+              task.typeTag || catalog.selectedTaskType
+            }}</el-tag>
+            <el-tag size="small" effect="plain" style="margin-left: 6px"
+              >{{ task.minutes }} 分钟</el-tag
+            >
+          </p>
+
+          <!-- 倒计时区域 -->
+          <div class="timer">
+            <el-progress type="circle" :percentage="progress" :width="112" />
+            <div class="t-side">
+              <div class="t-time" aria-live="polite">{{ timeText }}</div>
+              <div class="t-ops">
+                <el-button
+                  size="small"
+                  type="primary"
+                  :disabled="!task || isRunning || secLeft === 0 || isAnimating"
+                  @click="startTimer"
+                >
+                  {{ isRunning ? '计时中' : secLeft === 0 ? '已结束' : '开始' }}
+                </el-button>
+                <!-- 删除卡片上的“完成”小按钮：改为到点弹窗操作 -->
+              </div>
+              <div class="t-hint">
+                {{
+                  canFinishBtn
+                    ? '时间到啦，请在弹出的对话框中点击「完成」'
+                    : '计时中，不能暂停或提前结束'
+                }}
+              </div>
+            </div>
+          </div>
+
+          <p class="hint" v-if="session.rerollLeft > 0">按「开始」后将锁定当前卡，不能再换卡</p>
+        </el-card>
+
+        <el-empty v-else description="点击「抽卡」开始今天的小行动" style="margin-top: 8px" />
+      </div>
+    </section>
+
+    <!-- 中置对话框（统一移动端样式） -->
+    <!-- 到点：移动端中置对话框 -->
+    <el-dialog
+      v-model="timeupDialog"
+      align-center
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="false"
+      class="nc-dlg nc-dlg--success"
+    >
+      <div class="dlg-icon">⏰</div>
+      <div class="dlg-title">计时 0:00 啦</div>
+      <div class="dlg-sub">做得好！点「完成」来收个尾，然后去领奖励吧～</div>
+      <div class="dlg-actions">
+        <el-button type="primary" class="dlg-btn-primary" round @click="finishTask">完成</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 抽到成功：移动端中置对话框 -->
+    <el-dialog
+      v-model="drawDialog"
+      align-center
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="false"
+      class="nc-dlg nc-dlg--info"
+    >
+      <div class="dlg-icon">🎴</div>
+      <div class="dlg-title">抽到啦！</div>
+      <div class="dlg-sub">点击「开始」按钮进入计时</div>
+      <div class="dlg-actions">
+        <el-button type="primary" class="dlg-btn-primary" round @click="drawDialog = false"
+          >好的</el-button
+        >
+      </div>
+    </el-dialog>
+
+    <!-- 换卡成功：移动端中置对话框 -->
+    <el-dialog
+      v-model="rerollDialog"
+      align-center
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="false"
+      class="nc-dlg nc-dlg--info"
+    >
+      <div class="dlg-icon">🔁</div>
+      <div class="dlg-title">已换一张</div>
+      <div class="dlg-sub">{{ rerollLeftText }}</div>
+      <div class="dlg-actions">
+        <el-button type="primary" class="dlg-btn-primary" round @click="rerollDialog = false"
+          >好的</el-button
+        >
+      </div>
+    </el-dialog>
+
+    <!-- 完成失败：移动端中置对话框 -->
+    <el-dialog
+      v-model="finishErrorDialog"
+      align-center
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="false"
+      class="nc-dlg nc-dlg--warn"
+    >
+      <div class="dlg-icon">⚠️</div>
+      <div class="dlg-title">无法完成</div>
+      <div class="dlg-sub">{{ finishErrorText }}</div>
+      <div class="dlg-actions">
+        <el-button type="primary" class="dlg-btn-primary" round @click="finishErrorDialog = false">
+          我知道了
+        </el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 动画覆盖层占位 -->
+    <div class="anim-layer" data-anim-layer="overlay" aria-hidden="true"></div>
+  </div>
+</template>
+
+<style scoped>
+.m-page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+/* 抽卡前规则提示 */
+.rule-tip {
+  margin: 4px 0 6px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 栈式按钮 */
+.m-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+.m-btn {
+  width: 100%;
+}
+.hint-center {
+  margin-top: -2px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+/* 卡片与动画宿主 */
+.card-host {
+  position: relative;
+}
+.anim-host {
+  min-height: 220px;
+  display: flex;
+  align-items: stretch;
+}
+.m-card {
+  border-radius: 16px;
+  border: 1px solid var(--el-border-color);
+  padding: 12px 14px;
+  width: 100%;
+}
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+.hint {
+  margin: 4px 0 0;
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+}
+
+/* 计时器 */
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.t-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.t-time {
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.t-ops {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.t-hint {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+/* 动画覆盖层（占位） */
+.anim-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  display: none;
+}
+</style>

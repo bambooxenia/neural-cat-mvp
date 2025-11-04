@@ -1,0 +1,9 @@
+<template>
+  <div class="page">Sticker Exchange · Under Construction</div>
+</template>
+
+<script setup lang="ts"></script>
+
+<style scoped>
+.page { padding: 16px; color: #666; }
+</style>

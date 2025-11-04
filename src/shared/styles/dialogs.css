@@ -1,0 +1,144 @@
+/* ============================================================================
+   Neuron Cat - Unified Dialog Styles
+   File: src/shared/styles/dialogs.css
+   Purpose:
+     1) 统一中置对话框（el-dialog，加 .nc-dlg 类）
+     2) 统一 Element Plus 的 MessageBox 样式（确认/警告等）
+   Usage:
+     - 给 <el-dialog> 添加 class="nc-dlg [nc-dlg--info|--warn|--success|--timeup]"
+     - MessageBox 无需额外类名，样式全局覆盖
+   Notes:
+     - 这些样式假设已在 Element Plus 主题样式之后导入
+     - 尽量避免过宽的选择器；若后续有冲突，可以用更强的作用域壳或调整权重
+   ========================================================================== */
+
+/* ========== 通用：让对话框在 overlay 中垂直水平居中（移动端友好） ========== */
+.el-overlay-dialog {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========== 统一的中置对话框（页面自定义内容的 el-dialog） ========== */
+/* 宽度统一：移动端 92vw，桌面最多 420px；高度自适应、最多 70vh；圆角、隐藏原生头部 */
+.nc-dlg {
+  /* 避免 Element Plus 内部变量导致的宽度限制 */
+  --el-dialog-width: auto;
+  width: min(92vw, 420px) !important;
+  max-width: 92vw;
+
+  height: auto !important;
+  max-height: 70vh;
+  overflow: hidden;
+
+  border-radius: 16px;
+  margin: 0 auto !important; /* 水平居中（垂直居中交给 overlay flex） */
+}
+
+/* 统一隐藏 el-dialog 的默认头部（我们使用自定义标题区） */
+.nc-dlg .el-dialog__header {
+  display: none;
+}
+
+/* 内容区内边距与滚动策略：内容很多时，body 内滚动，不撑大弹窗 */
+.nc-dlg .el-dialog__body {
+  padding: 18px 16px 20px;
+  text-align: center;
+  max-height: calc(70vh - 38px); /* 70vh 减粗略上下边距，避免外溢 */
+  overflow: auto;
+}
+
+/* 统一的内容元素（icon / 标题 / 副文 / 按钮组） */
+.nc-dlg .dlg-icon {
+  font-size: 30px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.nc-dlg .dlg-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.nc-dlg .dlg-sub {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+  margin-bottom: 16px;
+}
+
+.nc-dlg .dlg-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 主按钮统一：全宽、较高可点击区、超大圆角 */
+.nc-dlg .dlg-btn-primary {
+  width: 100%;
+  height: 44px;
+  font-size: 16px;
+  border-radius: 999px;
+}
+
+/* 语义修饰：按需微调饱和度（不强绑颜色主题，便于适配暗色/品牌色） */
+.nc-dlg.nc-dlg--warn    .dlg-icon { filter: saturate(1.05); }
+.nc-dlg.nc-dlg--info    .dlg-icon { filter: saturate(1.05); }
+.nc-dlg.nc-dlg--success .dlg-icon { filter: saturate(1.05); }
+
+/* 可选：针对“到点”弹窗的额外上边距（如需） */
+.nc-dlg.nc-dlg--timeup .el-dialog__body {
+  padding-top: 22px;
+}
+
+/* ========== 统一 Element Plus 的 MessageBox（确认框等）为移动端友好风格 ========== */
+.el-message-box {
+  width: min(92vw, 420px) !important;
+  border-radius: 16px !important;
+  margin: 0 auto; /* 与 overlay 居中策略配合 */
+}
+
+.el-message-box__header {
+  padding: 10px 14px 0;
+}
+
+.el-message-box__title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.el-message-box__content {
+  padding: 6px 14px 0;
+  font-size: 14px;
+}
+
+.el-message-box__btns {
+  padding: 16px 14px 16px;
+  display: flex;
+  flex-direction: column-reverse; /* 先显示“取消”，下方显示“确认”更贴合移动端单手 */
+  gap: 10px;
+}
+
+.el-message-box__btns .el-button {
+  width: 100%;
+  height: 44px;
+  border-radius: 999px;
+  font-size: 15px;
+}
+
+/* ========== 降噪：在小屏上防止对话框过度阴影或边距异常（可按需求调整） ========== */
+@media (max-width: 480px) {
+  .el-message-box,
+  .nc-dlg {
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  }
+}
+
+/* ========== 无障碍：减少动画环境下，避免对话框出现过快的位移（若使用过渡时） ========== */
+@media (prefers-reduced-motion: reduce) {
+  .el-message-box,
+  .nc-dlg {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -1,0 +1,19 @@
+:root{
+  --nc-container-w: 420px;                /* 手机宽度上限 */
+  --nc-radius: 16px;
+  --nc-gap: 12px;
+  --nc-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,body,#app{height:100%;}
+body{margin:0;background:var(--el-bg-color);}
+
+.m-container{
+  max-width: var(--nc-container-w);
+  margin: 0 auto;
+  padding: 12px 12px calc(12px + var(--nc-safe-bottom));
+}
+
+.el-button.is-round{border-radius: 999px;}
+/* 触摸压感（适度缩放） */
+@media (hover:none){ .pressable:active{ transform: scale(.98); } }
