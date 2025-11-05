@@ -203,7 +203,7 @@ function startTimer() {
   if (session.canAccept) {
     const r = session.accept()
     if (!r.ok) {
-      ElMessage.warning('无法进入执行状态')
+      ElMessage.warning('Unable to enter execution mode.')
       return
     }
   }
@@ -219,12 +219,12 @@ onBeforeRouteLeave(async (_to, _from, next) => {
   if (!needCharge) return next()
 
   const ok = await ElMessageBox.confirm(
-    `返回将消耗 1 张贴纸（当前持有：${wallet.balance}）。确认要返回吗？`,
-    '返回前确认',
+    `Returning will consume 1 sticker (you currently have ${wallet.balance}). Still want to leave?`,
+    'Confirm before leaving',
     {
       type: 'warning',
-      confirmButtonText: '仍要返回（消耗/记欠费 1 ）',
-      cancelButtonText: '继续留在此页',
+      confirmButtonText: 'Leave anyway (spend/record 1 sticker)',
+      cancelButtonText: 'Stay on this page',
     }
   )
     .then(() => true)
@@ -236,7 +236,7 @@ onBeforeRouteLeave(async (_to, _from, next) => {
   if (!r.ok && r.reason === 'insufficient_tokens') {
     try {
       session.recordExitDebt()
-      ElMessage.info('余额不足，已记欠费 1 张贴纸')
+      ElMessage.info('Insufficient balance; recorded debt for 1 sticker.')
     } catch {}
   }
   next()
@@ -259,10 +259,10 @@ async function draw() {
   const res = session.draw()
   if (!res.ok) {
     const map: Record<string, string> = {
-      active_session: '当前已有进行中的任务卡，请先完成或放弃',
-      empty_pool: '此类型任务池为空，请先添加任务或更换类型',
+      active_session: 'A task card is already in progress; finish or drop it first.',
+      empty_pool: 'This type\'s task pool is empty; add tasks or pick another type.',
     }
-    return ElMessage.warning(map[res.reason ?? ''] || '抽卡失败，请重试')
+    return ElMessage.warning(map[res.reason ?? ''] || 'Failed to draw a card. Please try again.')
   }
 
   resetTimerForCurrentTask() // 抽到卡后准备计时（但不自动开始）
@@ -280,16 +280,16 @@ async function draw() {
 
 async function reroll() {
   if (!canRerollBtn.value) {
-    if (!session.canReroll) return ElMessage.info('当前不在可换卡状态')
+    if (!session.canReroll) return ElMessage.info('Cannot swap cards right now.')
     if (wallet.balance < session.session.rerollCostToken)
-      return ElMessage.warning('需要 1 张贴纸才能换卡')
+      return ElMessage.warning('Swapping requires 1 sticker.')
     return
   }
 
   const ok = await ElMessageBox.confirm(
-    `换一张将消耗 1 张贴纸（当前持有：${wallet.balance}）。确认要换吗？`,
-    '确认换卡',
-    { type: 'warning', confirmButtonText: '确认换卡', cancelButtonText: '取消' }
+    `Swapping will consume 1 sticker (you currently have ${wallet.balance}). Proceed?`,
+    'Confirm swap',
+    { type: 'warning', confirmButtonText: 'Confirm swap', cancelButtonText: 'Cancel' }
   )
     .then(() => true)
     .catch(() => false)
@@ -299,18 +299,18 @@ async function reroll() {
   const res = session.reroll()
   if (!res.ok) {
     const map: Record<string, string> = {
-      not_in_drawn: '当前不在抽卡状态，无法更换',
-      reroll_exhausted: '换卡次数已用完',
-      pool_depleted: '今日该类型的任务都抽过了，无法再换',
-      insufficient_tokens: '需要 1 张贴纸才能换卡',
-      token_spend_failed: '扣贴纸失败，请重试',
+      not_in_drawn: 'Not in draw state; unable to swap.',
+      reroll_exhausted: 'All swap attempts have been used.',
+      pool_depleted: 'All tasks of this type were drawn today; no more swaps available.',
+      insufficient_tokens: 'Swapping requires 1 sticker.',
+      token_spend_failed: 'Failed to deduct a sticker; please try again.',
     }
-    return ElMessage.warning(map[res.reason ?? ''] || '换卡失败，请重试')
+    return ElMessage.warning(map[res.reason ?? ''] || 'Swap failed. Please try again.')
   }
 
   resetTimerForCurrentTask() // 新卡 → 重置计时
 
-  rerollLeftText.value = `剩 ${session.rerollLeft}`
+  rerollLeftText.value = `Remaining ${session.rerollLeft}`
   rerollDialog.value = true
 
   if (animEnabled.value) {
@@ -328,11 +328,11 @@ function finishTask() {
   const r = session.finish()
   if (!r.ok) {
     const map: Record<string, string> = {
-      already_completed: '本任务已完成',
-      not_accepted: '请先接受任务再完成',
+      already_completed: 'This task is already completed.',
+      not_accepted: 'Please accept the task before finishing.',
     }
 
-    finishErrorText.value = map[r.reason ?? ''] || '完成失败'
+    finishErrorText.value = map[r.reason ?? ''] || 'Failed to finish.'
     finishErrorDialog.value = true
     return
   }
@@ -356,9 +356,9 @@ onMounted(() => {
   const beforeDebt = wallet.exitDebt
   const settle = session.settleExitDebt()
   if (!settle.ok && settle.leftDebt > 0) {
-    ElMessage.warning(`你有 ${settle.leftDebt} 张贴纸欠费未结清`)
+    ElMessage.warning(`You still owe ${settle.leftDebt} sticker(s).`)
   } else if (beforeDebt > 0) {
-    ElMessage.success(`已自动结清 ${beforeDebt} 张贴纸欠费`)
+    ElMessage.success(`Automatically settled ${beforeDebt} sticker debt.`)
   }
 
   // 然后再恢复倒计时（依赖于当前 task）
@@ -417,15 +417,15 @@ watch(
 
 <template>
   <div class="m-page">
-    <PageHeader title="任务抽卡">
+    <PageHeader title="Task Card Draw">
       <template #extra>
-        <el-tag type="warning" round>贴纸余额：{{ wallet.balance }}</el-tag>
+        <el-tag type="warning" round>Sticker balance: {{ wallet.balance }}</el-tag>
       </template>
     </PageHeader>
 
     <!-- 抽卡前：规则提示（常驻） -->
     <div v-if="session.canDraw" class="rule-tip">
-      ⚠️ 抽卡以后，在完成前，换卡或退出都会消耗 1 张贴纸。
+      ⚠️ After drawing, swapping or exiting before finishing consumes 1 sticker.
     </div>
 
     <!-- 操作区：抽卡 / 换卡 -->
@@ -437,7 +437,7 @@ watch(
         class="m-btn"
         :disabled="!session.canDraw || isAnimating"
         @click="draw"
-        >抽卡</el-button
+        >Draw Card</el-button
       >
 
       <el-button
@@ -448,14 +448,14 @@ watch(
           !session.canReroll || wallet.balance < session.session.rerollCostToken || isAnimating
         "
         @click="reroll"
-        >换一张（剩 {{ session.rerollLeft }}）</el-button
+        >Swap Card ({{ session.rerollLeft }} left)</el-button
       >
 
       <div
         v-if="session.canReroll && wallet.balance < session.session.rerollCostToken"
         class="hint-center"
       >
-        换卡需消耗 1 张贴纸，你当前没有贴纸
+        Swapping uses 1 sticker; you currently have none.
       </div>
     </div>
 
@@ -469,7 +469,7 @@ watch(
               task.typeTag || catalog.selectedTaskType
             }}</el-tag>
             <el-tag size="small" effect="plain" style="margin-left: 6px"
-              >{{ task.minutes }} 分钟</el-tag
+              >{{ task.minutes }} min</el-tag
             >
           </p>
 
@@ -485,24 +485,24 @@ watch(
                   :disabled="!task || isRunning || secLeft === 0 || isAnimating"
                   @click="startTimer"
                 >
-                  {{ isRunning ? '计时中' : secLeft === 0 ? '已结束' : '开始' }}
+                  {{ isRunning ? 'Timing' : secLeft === 0 ? 'Finished' : 'Start' }}
                 </el-button>
                 <!-- 删除卡片上的“完成”小按钮：改为到点弹窗操作 -->
               </div>
               <div class="t-hint">
                 {{
                   canFinishBtn
-                    ? '时间到啦，请在弹出的对话框中点击「完成」'
-                    : '计时中，不能暂停或提前结束'
+                    ? 'Time\'s up! Click "Finish" in the dialog.'
+                    : 'Timer running; cannot pause or finish early.'
                 }}
               </div>
             </div>
           </div>
 
-          <p class="hint" v-if="session.rerollLeft > 0">按「开始」后将锁定当前卡，不能再换卡</p>
+          <p class="hint" v-if="session.rerollLeft > 0">Once you tap "Start", the current card locks and can\'t be swapped.</p>
         </el-card>
 
-        <el-empty v-else description="点击「抽卡」开始今天的小行动" style="margin-top: 8px" />
+        <el-empty v-else description="Tap &quot;Draw Card&quot; to start today&#39;s mini action." style="margin-top: 8px" />
       </div>
     </section>
 
@@ -517,10 +517,10 @@ watch(
       class="nc-dlg nc-dlg--success"
     >
       <div class="dlg-icon">⏰</div>
-      <div class="dlg-title">计时 0:00 啦</div>
-      <div class="dlg-sub">做得好！点「完成」来收个尾，然后去领奖励吧～</div>
+      <div class="dlg-title">Timer at 0:00</div>
+      <div class="dlg-sub">Nice work! Tap "Finish" to wrap up, then claim your reward.</div>
       <div class="dlg-actions">
-        <el-button type="primary" class="dlg-btn-primary" round @click="finishTask">完成</el-button>
+        <el-button type="primary" class="dlg-btn-primary" round @click="finishTask">Finish</el-button>
       </div>
     </el-dialog>
 
@@ -534,11 +534,11 @@ watch(
       class="nc-dlg nc-dlg--info"
     >
       <div class="dlg-icon">🎴</div>
-      <div class="dlg-title">抽到啦！</div>
-      <div class="dlg-sub">点击「开始」按钮进入计时</div>
+      <div class="dlg-title">Card drawn!</div>
+      <div class="dlg-sub">Tap "Start" to begin timing.</div>
       <div class="dlg-actions">
         <el-button type="primary" class="dlg-btn-primary" round @click="drawDialog = false"
-          >好的</el-button
+          >Got it</el-button
         >
       </div>
     </el-dialog>
@@ -553,11 +553,11 @@ watch(
       class="nc-dlg nc-dlg--info"
     >
       <div class="dlg-icon">🔁</div>
-      <div class="dlg-title">已换一张</div>
+      <div class="dlg-title">Card swapped</div>
       <div class="dlg-sub">{{ rerollLeftText }}</div>
       <div class="dlg-actions">
         <el-button type="primary" class="dlg-btn-primary" round @click="rerollDialog = false"
-          >好的</el-button
+          >Got it</el-button
         >
       </div>
     </el-dialog>
@@ -572,11 +572,11 @@ watch(
       class="nc-dlg nc-dlg--warn"
     >
       <div class="dlg-icon">⚠️</div>
-      <div class="dlg-title">无法完成</div>
+      <div class="dlg-title">Unable to finish</div>
       <div class="dlg-sub">{{ finishErrorText }}</div>
       <div class="dlg-actions">
         <el-button type="primary" class="dlg-btn-primary" round @click="finishErrorDialog = false">
-          我知道了
+          Understood
         </el-button>
       </div>
     </el-dialog>

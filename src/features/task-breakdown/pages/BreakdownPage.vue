@@ -3,15 +3,15 @@
   <div class="m-page safe-bottom">
     <!-- 头部 -->
     <header class="m-hd">
-      <BackButton aria-label="返回上一级" />
-      <h1 class="m-title">任务拆分</h1>
-      <p class="m-sub">随手写下你要做的事，点保存即可</p>
+      <BackButton aria-label="Go back" />
+      <h1 class="m-title">Task Breakdown</h1>
+      <p class="m-sub">Jot down what you need to do and tap Save when you're ready.</p>
     </header>
 
     <!-- 单输入 + 保存 -->
     <section class="section">
       <h2 class="sec-title primary">
-        <span class="bar" aria-hidden="true"></span> 快速记录
+        <span class="bar" aria-hidden="true"></span> Quick Capture
       </h2>
 
       <el-card class="m-card" shadow="hover">
@@ -19,13 +19,13 @@
           v-model="text"
           type="textarea"
           :rows="8"
-          placeholder="例如：整理论文资料，先把参考文献按年份分类……"
-          aria-label="任务内容"
+          placeholder="Example: organize thesis materials—start by sorting references by year…"
+          aria-label="Task details"
         />
         <div class="m-actions">
-          <el-button type="primary" @click="save">保存</el-button>
+          <el-button type="primary" @click="save">Save</el-button>
         </div>
-        <p v-if="savedAt" class="hint">已保存：{{ formatTime(savedAt) }}</p>
+        <p v-if="savedAt" class="hint">Saved: {{ formatTime(savedAt) }}</p>
       </el-card>
     </section>
 
@@ -61,7 +61,7 @@ function save() {
   const payload = { text: text.value, ts: Date.now() }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   savedAt.value = payload.ts
-  ElMessage.success('已保存')
+  ElMessage.success('Saved')
 }
 
 function formatTime(ts: number) {

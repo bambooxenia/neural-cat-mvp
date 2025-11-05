@@ -51,7 +51,7 @@ const routes: RouteRecordRaw[] = [
             path: '',
             name: 'home.index',
             component: HomePage,
-            meta: { title: '首页', tab: 'home' },
+            meta: { title: 'Home', tab: 'home' },
           },
 
           // 先到 心情选择页（MoodPage）
@@ -59,7 +59,7 @@ const routes: RouteRecordRaw[] = [
             path: 'mood',
             name: 'home.mood',
             component: MoodPage,
-            meta: { title: '心情诱饵', tab: 'home', backTo: 'home.index' },
+            meta: { title: 'Mood Bait', tab: 'home', backTo: 'home.index' },
           },
 
           // 再到 诱饵池（BaitsPage）
@@ -74,21 +74,21 @@ const routes: RouteRecordRaw[] = [
           {
             path: 'tasks',
             component: RouterOutlet,
-            meta: { title: '任务', tab: 'home', backTo: 'home.index' },
+            meta: { title: 'Tasks', tab: 'home', backTo: 'home.index' },
             children: [
               // 默认子路由 = 类型页，并使用你菜单里一直在用的名字 'home.tasks'
               {
                 path: '/home/tasks',
                 name: 'home.tasks',
                 component: TaskTypePage,
-                meta: { title: '任务类型', tab: 'home', backTo: 'home.index' },
+                meta: { title: 'Task Types', tab: 'home', backTo: 'home.index' },
               },
 
               {
                 path: 'card',
                 name: 'home.tasks.card',
                 component: () => import('@/features/task-cards/pages/TaskCardsPage.vue'),
-                meta: { title: '任务抽卡', tab: 'home', backTo: 'home.tasks' },
+                meta: { title: 'Task Cards', tab: 'home', backTo: 'home.tasks' },
                 // 没选类型就回类型页
                 beforeEnter: async () => {
                   const { useTaskCatalogStore } = await import(
@@ -109,13 +109,13 @@ const routes: RouteRecordRaw[] = [
             path: 'breakdown',
             name: 'home.breakdown',
             component: BreakdownPage,
-            meta: { title: '任务拆分', tab: 'home', backTo: 'home.index' },
+            meta: { title: 'Task Breakdown', tab: 'home', backTo: 'home.index' },
           },
           {
             path: 'ideas',
             name: 'home.ideas',
             component: IdeaNestPage,
-            meta: { title: '点子猫窝', tab: 'home', backTo: 'home.index' },
+            meta: { title: 'Idea Nest', tab: 'home', backTo: 'home.index' },
           },
         ],
       },

@@ -218,7 +218,7 @@ function startTimer() {
   if (session.canAccept) {
     const r = session.accept()
     if (!r.ok) {
-      showSimple('warn', '无法进入执行状态', '请稍后重试')
+      showSimple('warn', 'Unable to enter execution mode', 'Please try again later.')
       return
     }
   }
@@ -234,12 +234,12 @@ onBeforeRouteLeave(async (_to, _from, next) => {
   if (!needCharge) return next()
 
   const ok = await ElMessageBox.confirm(
-    `返回将消耗 1 张贴纸（当前持有：${wallet.balance}）。确认要返回吗？`,
-    '返回前确认',
+    `Returning will consume 1 sticker (you currently have ${wallet.balance}). Still want to go back?`,
+    'Confirm before leaving',
     {
       type: 'warning',
-      confirmButtonText: '仍要返回（消耗/记欠费 1 ）',
-      cancelButtonText: '继续留在此页',
+      confirmButtonText: 'Leave anyway (spend/record 1 sticker)',
+      cancelButtonText: 'Stay on this page',
     }
   )
     .then(() => true)
@@ -251,7 +251,7 @@ onBeforeRouteLeave(async (_to, _from, next) => {
   if (!r.ok && r.reason === 'insufficient_tokens') {
     try {
       session.recordExitDebt()
-      showSimple('info', '已记欠费', '余额不足，已记欠费 1 张贴纸')
+      showSimple('info', 'Debt recorded', 'Insufficient balance; recorded debt for 1 sticker.')
     } catch {}
   }
   next()
@@ -272,10 +272,10 @@ async function draw() {
   const res = session.draw()
   if (!res.ok) {
     const map: Record<string, string> = {
-      active_session: '当前已有进行中的诱饵卡，请先完成或放弃',
-      empty_pool: '当前心情的诱饵池为空，请先添加诱饵或更换心情',
+      active_session: 'A bait card is already in progress; please finish or abandon it first.',
+      empty_pool: 'This mood\'s bait pool is empty; add bait or pick another mood.',
     }
-    return showSimple('warn', '抽卡失败', map[res.reason ?? ''] || '请稍后重试')
+    return showSimple('warn', 'Failed to draw card', map[res.reason ?? ''] || 'Please try again later.')
   }
 
   resetTimerForCurrentBait() // 抽到卡后准备计时（但不自动开始）
@@ -293,17 +293,18 @@ async function draw() {
 
 async function reroll() {
   if (!canRerollBtn.value) {
-    if (!session.canReroll) return showSimple('info', '无法换卡', '当前不在可换卡状态')
+    if (!session.canReroll) return showSimple('info', 'Unable to swap card', 'Not currently in a swappable state.')
     if (wallet.balance < session.session.rerollCostToken)
-      return showSimple('warn', '需要 1 张贴纸', '余额不足，无法换卡')
-    if (isRunning.value) return showSimple('info', '已开始计时', '开始后将锁定当前卡，不能再换卡')
+      return showSimple('warn', 'Requires 1 sticker', 'Insufficient balance; cannot swap.')
+    if (isRunning.value)
+      return showSimple('info', 'Timer already running', 'Once started, the current card is locked and cannot be swapped.')
     return
   }
 
   const ok = await ElMessageBox.confirm(
-    `换一张将消耗 1 张贴纸（当前持有：${wallet.balance}）。确认要换吗？`,
-    '确认换卡',
-    { type: 'warning', confirmButtonText: '确认换卡', cancelButtonText: '取消' }
+    `Swapping will consume 1 sticker (you currently have ${wallet.balance}). Proceed with the swap?`,
+    'Confirm swap',
+    { type: 'warning', confirmButtonText: 'Confirm swap', cancelButtonText: 'Cancel' }
   )
     .then(() => true)
     .catch(() => false)
@@ -313,18 +314,18 @@ async function reroll() {
   const res = session.reroll()
   if (!res.ok) {
     const map: Record<string, string> = {
-      not_in_drawn: '当前不在抽卡状态，无法更换',
-      reroll_exhausted: '换卡次数已用完',
-      pool_depleted: '今日该心情的诱饵都抽过了，无法再换',
-      insufficient_tokens: '需要 1 张贴纸才能换卡',
-      token_spend_failed: '扣贴纸失败，请重试',
+      not_in_drawn: 'Not in draw state, unable to swap.',
+      reroll_exhausted: 'All swap attempts have been used.',
+      pool_depleted: 'All bait for this mood has been drawn today; no more swaps available.',
+      insufficient_tokens: 'Need 1 sticker to swap.',
+      token_spend_failed: 'Failed to deduct a sticker, please retry.',
     }
-    return showSimple('warn', '换卡失败', map[res.reason ?? ''] || '请稍后重试')
+    return showSimple('warn', 'Swap failed', map[res.reason ?? ''] || 'Please try again later.')
   }
 
   resetTimerForCurrentBait() // 新卡 → 重置计时
 
-  rerollLeftText.value = `剩 ${session.rerollLeft}`
+  rerollLeftText.value = `Remaining ${session.rerollLeft}`
   rerollDialog.value = true
 
   if (animEnabled.value) {
@@ -345,10 +346,10 @@ function finishTask() {
   const r = session.finish()
   if (!r.ok) {
     const map: Record<string, string> = {
-      already_completed: '本诱饵已完成',
-      not_accepted: '请先点击「开始」进入执行状态再完成',
+      already_completed: 'This bait is already complete.',
+      not_accepted: 'Tap "Start" to enter execution before finishing.',
     }
-    finishErrorText.value = map[r.reason ?? ''] || '完成失败'
+    finishErrorText.value = map[r.reason ?? ''] || 'Failed to finish.'
     finishErrorDialog.value = true
     return
   }
@@ -385,7 +386,7 @@ onMounted(() => {
   // 4) 进入时先结清欠费（如果有）
   const settle = session.settleExitDebt()
   if (!settle.ok && settle.leftDebt > 0) {
-    showSimple('warn', '有未结清的贴纸欠费', `你还有 ${settle.leftDebt} 张贴纸欠费未结清`)
+    showSimple('warn', 'Outstanding sticker debt', `You still owe ${settle.leftDebt} stickers.`)
   }
 
   // 5) 恢复倒计时（依赖于当前 bait）
@@ -442,15 +443,15 @@ const baitMoodLabels = computed(() => {
 
 <template>
   <div class="m-page">
-    <PageHeader title="心情诱饵卡">
+    <PageHeader title="Mood Bait Cards">
       <template #extra>
-        <el-tag type="warning" round>贴纸余额：{{ wallet.balance }}</el-tag>
+        <el-tag type="warning" round>Sticker balance: {{ wallet.balance }}</el-tag>
       </template>
     </PageHeader>
 
     <!-- 抽卡前：规则提示（常驻） -->
     <div v-if="session.canDraw" class="rule-tip">
-      ⚠️ 抽卡以后，在完成前，换卡或退出都会消耗 1 张贴纸。
+      ⚠️ After drawing, swapping or leaving before finishing will consume 1 sticker.
     </div>
 
     <!-- 操作区：抽卡 / 换卡 -->
@@ -462,7 +463,7 @@ const baitMoodLabels = computed(() => {
         class="m-btn"
         :disabled="!canDrawBtn"
         @click="draw"
-        >抽卡</el-button
+        >Draw Card</el-button
       >
 
       <el-button
@@ -471,14 +472,14 @@ const baitMoodLabels = computed(() => {
         class="m-btn"
         :disabled="!canRerollBtn"
         @click="reroll"
-        >换一张（剩 {{ session.rerollLeft }}）</el-button
+        >Swap Card ({{ session.rerollLeft }} left)</el-button
       >
 
       <div
         v-if="session.canReroll && wallet.balance < session.session.rerollCostToken"
         class="hint-center"
       >
-        换卡需消耗 1 张贴纸，你当前没有贴纸
+        Swapping uses 1 sticker; you currently have none.
       </div>
     </div>
 
@@ -518,23 +519,23 @@ const baitMoodLabels = computed(() => {
                   :disabled="!bait || isRunning || secLeft === 0 || isAnimating"
                   @click="startTimer"
                 >
-                  {{ isRunning ? '计时中' : secLeft === 0 ? '已结束' : '开始' }}
+                  {{ isRunning ? 'Timing' : secLeft === 0 ? 'Finished' : 'Start' }}
                 </el-button>
               </div>
               <div class="t-hint">
                 {{
                   canFinishBtn
-                    ? '时间到啦，请在弹出的对话框中点击「完成」'
-                    : '计时中，不能暂停或提前结束'
+                    ? 'Time\'s up! Click "Finish" in the dialog.'
+                    : 'Timer running; no pausing or finishing early.'
                 }}
               </div>
             </div>
           </div>
 
-          <p class="hint" v-if="session.rerollLeft > 0">按「开始」后将锁定当前卡，不能再换卡</p>
+          <p class="hint" v-if="session.rerollLeft > 0">Once you tap "Start", the current card locks and cannot be swapped.</p>
         </el-card>
 
-        <el-empty v-else description="点击「抽卡」开始今天的小诱饵" style="margin-top: 8px" />
+        <el-empty v-else description="Tap 'Draw Card' to start today's bait" style="margin-top: 8px" />
       </div>
     </section>
 
@@ -550,10 +551,10 @@ const baitMoodLabels = computed(() => {
       class="nc-dlg nc-dlg--success"
     >
       <div class="dlg-icon">⏰</div>
-      <div class="dlg-title">计时 0:00 啦</div>
-      <div class="dlg-sub">做得好！点「完成」来收个尾，然后去领奖励吧～</div>
+      <div class="dlg-title">Timer at 0:00</div>
+      <div class="dlg-sub">Nice work! Tap "Finish" to wrap up, then go claim your reward.</div>
       <div class="dlg-actions">
-        <el-button type="primary" class="dlg-btn-primary" round @click="finishTask">完成</el-button>
+        <el-button type="primary" class="dlg-btn-primary" round @click="finishTask">Finish</el-button>
       </div>
     </el-dialog>
 
@@ -567,11 +568,11 @@ const baitMoodLabels = computed(() => {
       class="nc-dlg nc-dlg--info"
     >
       <div class="dlg-icon">🎴</div>
-      <div class="dlg-title">抽到啦！</div>
-      <div class="dlg-sub">点击「开始」按钮进入计时</div>
+      <div class="dlg-title">Card drawn!</div>
+      <div class="dlg-sub">Tap "Start" to begin timing.</div>
       <div class="dlg-actions">
         <el-button type="primary" class="dlg-btn-primary" round @click="drawDialog = false"
-          >好的</el-button
+          >Got it</el-button
         >
       </div>
     </el-dialog>
@@ -586,11 +587,11 @@ const baitMoodLabels = computed(() => {
       class="nc-dlg nc-dlg--info"
     >
       <div class="dlg-icon">🔁</div>
-      <div class="dlg-title">已换一张</div>
+      <div class="dlg-title">Card swapped</div>
       <div class="dlg-sub">{{ rerollLeftText }}</div>
       <div class="dlg-actions">
         <el-button type="primary" class="dlg-btn-primary" round @click="rerollDialog = false"
-          >好的</el-button
+          >Got it</el-button
         >
       </div>
     </el-dialog>
@@ -605,11 +606,11 @@ const baitMoodLabels = computed(() => {
       class="nc-dlg nc-dlg--warn"
     >
       <div class="dlg-icon">⚠️</div>
-      <div class="dlg-title">无法完成</div>
+      <div class="dlg-title">Unable to finish</div>
       <div class="dlg-sub">{{ finishErrorText }}</div>
       <div class="dlg-actions">
         <el-button type="primary" class="dlg-btn-primary" round @click="finishErrorDialog = false">
-          我知道了
+          Understood
         </el-button>
       </div>
     </el-dialog>
@@ -628,7 +629,7 @@ const baitMoodLabels = computed(() => {
       <div class="dlg-sub">{{ simpleDlg.sub }}</div>
       <div class="dlg-actions">
         <el-button type="primary" class="dlg-btn-primary" round @click="simpleDlg.visible = false">
-          我知道了
+          Understood
         </el-button>
       </div>
     </el-dialog>

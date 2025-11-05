@@ -84,13 +84,13 @@ const addVisible = ref(false)
 const addKey = ref('')
 const addLabel = ref('')
 const addIcon = ref('✨')
-const addSub = ref('自定义心情')
+const addSub = ref('Custom mood')
 
 const openAdd = () => {
   addKey.value = ''
   addLabel.value = ''
   addIcon.value = '✨'
-  addSub.value = '自定义心情'
+  addSub.value = 'Custom mood'
   addVisible.value = true
 }
 
@@ -98,14 +98,14 @@ const confirmAdd = () => {
   const key = addKey.value.trim()
   const label = (addLabel.value || key).trim()
   const icon = String(addIcon.value || '✨')
-  const sub = (addSub.value || '自定义心情').trim()
-  if (!key) return ElMessage.warning('请输入内部名称（key）')
+  const sub = (addSub.value || 'Custom mood').trim()
+  if (!key) return ElMessage.warning('Please enter an internal name (key).')
   const ok = catalog.addCustomMood(key, { label, icon, sub })
-  if (!ok) return ElMessage.warning('该心情已存在或不合法')
+  if (!ok) return ElMessage.warning('This mood already exists or is invalid.')
   session.setMood(key)
   selected.value = key
   addVisible.value = false
-  ElMessage.success('已添加心情')
+  ElMessage.success('Mood added.')
 }
 
 /* ------------------------------- 编辑心情 ------------------------------- */
@@ -142,7 +142,7 @@ const confirmEdit = () => {
     const newKey = String(editNewKey.value || '').trim()
     if (newKey && newKey !== oldKey) {
       const ok = catalog.renameCustomMood(oldKey, newKey)
-      if (!ok) return ElMessage.warning('改名失败：新名称冲突、形成环或不合法')
+      if (!ok) return ElMessage.warning('Rename failed: the new key conflicts, forms a loop, or is invalid.')
       userBait.migrateOnRename(oldKey, newKey)
       userBait.normalizeByResolver(catalog.resolveKey)
       if (session.currentMood === oldKey) {
@@ -153,7 +153,7 @@ const confirmEdit = () => {
   }
 
   editVisible.value = false
-  ElMessage.success('已保存')
+  ElMessage.success('Saved.')
 }
 
 /* ------------------------------- 删除心情 ------------------------------- */
@@ -164,7 +164,7 @@ const delStrategy = ref<'drop-bait' | 'assign-fallback'>('drop-bait')
 const delFallback = ref('')
 
 const openDelete = (value: string) => {
-  if (catalog.moodList.length <= 1) return ElMessage.info('至少保留一个心情类型哦')
+  if (catalog.moodList.length <= 1) return ElMessage.info('Keep at least one mood type.')
   const card = catalog.moodCards.find((c) => c.value === value)
   delKey.value = value
   delLabel.value = card?.meta.label || value
@@ -183,18 +183,18 @@ const confirmDelete = () => {
 
   if (catalog.moodList.length <= 1) {
     delVisible.value = false
-    return ElMessage.info('至少保留一个心情类型哦')
+    return ElMessage.info('Keep at least one mood type.')
   }
 
   const ok = catalog.removeMood(key)
-  if (!ok) return ElMessage.warning('删除失败：至少需保留一个心情')
+  if (!ok) return ElMessage.warning('Delete failed: you must keep at least one mood.')
 
   const onEmpty = delStrategy.value
   const fallback = onEmpty === 'assign-fallback' ? String(delFallback.value || '').trim() : ''
   if (onEmpty === 'assign-fallback') {
     if (!fallback || fallback === key || !catalog.moodList.includes(fallback)) {
       delVisible.value = false
-      return ElMessage.warning('请选择有效的回退心情')
+      return ElMessage.warning('Please choose a valid fallback mood.')
     }
   }
 
@@ -203,7 +203,7 @@ const confirmDelete = () => {
 
   delVisible.value = false
   navigator?.vibrate?.(10)
-  ElMessage.success('已删除')
+  ElMessage.success('Deleted.')
 }
 
 /* ------------------------------- 新增诱饵 ------------------------------- */
@@ -212,7 +212,7 @@ const baitTitle = ref('')
 const baitMood = ref('')
 
 const openAddBait = () => {
-  if (!selected.value) return ElMessage.info('请先选择一个心情类型')
+  if (!selected.value) return ElMessage.info('Please select a mood first.')
   baitTitle.value = ''
   baitMood.value = selected.value
   baitAddVisible.value = true
@@ -221,13 +221,13 @@ const openAddBait = () => {
 const confirmAddBait = () => {
   const title = baitTitle.value.trim()
   const mood = String(baitMood.value || '').trim()
-  if (!title) return ElMessage.warning('请填写诱饵标题')
-  if (!mood) return ElMessage.warning('请选择心情类型')
+  if (!title) return ElMessage.warning('Please enter a bait title.')
+  if (!mood) return ElMessage.warning('Please choose a mood.')
   const ok = userBait.add(title, [mood])
-  if (!ok) return ElMessage.error('添加失败')
+  if (!ok) return ElMessage.error('Add failed.')
   baitAddVisible.value = false
   navigator?.vibrate?.(10)
-  ElMessage.success('已添加诱饵')
+  ElMessage.success('Bait added.')
 }
 
 /* -------------------------- 诱饵管理（编辑/删除） -------------------------- */
@@ -258,38 +258,38 @@ const confirmEditBait = () => {
   if (!baitEditId.value) return
   const title = baitEditTitle.value.trim()
   const moods = baitEditMoods.value.slice()
-  if (!title) return ElMessage.warning('标题不能为空')
-  if (!moods.length) return ElMessage.warning('至少选择一个心情')
+  if (!title) return ElMessage.warning('Title cannot be empty.')
+  if (!moods.length) return ElMessage.warning('Select at least one mood.')
   const ok = userBait.update({ id: baitEditId.value, title, mood: moods })
-  if (!ok) return ElMessage.error('保存失败')
+  if (!ok) return ElMessage.error('Save failed.')
   baitEditVisible.value = false
-  ElMessage.success('已保存')
+  ElMessage.success('Saved.')
 }
 const removeBait = (id: number) => {
   userBait.remove(id)
-  ElMessage.success('已删除诱饵')
+  ElMessage.success('Bait deleted.')
 }
 </script>
 
 <template>
   <div class="m-page">
-    <PageHeader title="先选一个心情类型">
+    <PageHeader title="Pick a mood type first">
       <template #extra>
         <el-button text type="primary" @click="openAdd">
-          <el-icon style="margin-right: 4px"><Plus /></el-icon> 添加心情
+          <el-icon style="margin-right: 4px"><Plus /></el-icon> Add Mood
         </el-button>
         <el-button text type="primary" :disabled="!selected" @click="openAddBait">
-          <el-icon style="margin-right: 4px"><EditPen /></el-icon> 添加诱饵
+          <el-icon style="margin-right: 4px"><EditPen /></el-icon> Add Bait
         </el-button>
         <el-button text type="primary" :disabled="!selected" @click="openManageBaits">
-          <el-icon style="margin-right: 4px"><List /></el-icon> 管理诱饵
+          <el-icon style="margin-right: 4px"><List /></el-icon> Manage Bait
         </el-button>
       </template>
     </PageHeader>
 
     <div class="badges" style="margin: 4px 2px 8px">
-      <span class="tag tag--ok">可点选/双击编辑</span>
-      <span class="tag tag--warn">右滑或删除按钮可删除</span>
+      <span class="tag tag--ok">Tap or double-click to edit</span>
+      <span class="tag tag--warn">Swipe right or use Delete to remove</span>
     </div>
 
     <!-- 心情选择网格 -->
@@ -303,9 +303,9 @@ const removeBait = (id: number) => {
     />
 
     <div v-if="!catalog.moodList?.length" class="empty">
-      没有可选心情了，点右上角「添加心情」吧
+      No moods available yet; tap "Add Mood" in the top right.
       <div class="empty-actions">
-        <el-button type="primary" size="small" @click="openAdd">添加心情</el-button>
+        <el-button type="primary" size="small" @click="openAdd">Add Mood</el-button>
       </div>
     </div>
 
@@ -317,99 +317,98 @@ const removeBait = (id: number) => {
         :class="{ 'is-breathing': breathing }"
         @click="goNext"
       >
-        按「{{
-          catalog.moodCards.find((x) => x.value === selected)?.meta.label || '选择心情'
-        }}」开始
+        Start with "{{
+          catalog.moodCards.find((x) => x.value === selected)?.meta.label || 'Select a mood'
+        }}"
       </button>
     </div>
 
     <!-- =============== 新增心情 =============== -->
     <el-dialog v-model="addVisible" :width="'min(520px,92vw)'" align-center>
-      <template #header><strong>添加心情</strong></template>
+      <template #header><strong>Add Mood</strong></template>
       <el-form label-width="108px">
-        <el-form-item label="内部名称（key）">
+        <el-form-item label="Internal name (key)">
           <el-input
             v-model="addKey"
             maxlength="32"
             show-word-limit
-            placeholder="如：excited / sleepy"
+            placeholder="Eg: excited / sleepy"
           />
         </el-form-item>
-        <el-form-item label="显示标题">
+        <el-form-item label="Display title">
           <el-input
             v-model="addLabel"
             maxlength="16"
             show-word-limit
-            placeholder="默认使用 key，可稍后再改"
+            placeholder="Uses the key by default; you can change it later."
           />
         </el-form-item>
-        <el-form-item label="图标">
+        <el-form-item label="Icon">
           <el-input v-model="addIcon" placeholder="😀 / 😴 / ⚡️ / ✨ ..." />
         </el-form-item>
-        <el-form-item label="描述">
+        <el-form-item label="Description">
           <el-input
             v-model="addSub"
             type="textarea"
             :rows="2"
             maxlength="60"
             show-word-limit
-            placeholder="一句话描述这个心情…"
+            placeholder="Describe this mood in one sentence..."
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmAdd">添加</el-button>
+        <el-button @click="addVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="confirmAdd">Add</el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 编辑心情 =============== -->
     <el-dialog v-model="editVisible" :width="'min(560px,92vw)'" align-center>
-      <template #header><strong>编辑心情</strong></template>
+      <template #header><strong>Edit Mood</strong></template>
       <el-form label-width="108px">
-        <el-form-item label="显示标题">
+        <el-form-item label="Display title">
           <el-input v-model="editLabel" maxlength="16" show-word-limit />
         </el-form-item>
-        <el-form-item label="图标">
+        <el-form-item label="Icon">
           <el-input v-model="editIcon" />
         </el-form-item>
-        <el-form-item label="描述">
+        <el-form-item label="Description">
           <el-input v-model="editSub" type="textarea" :rows="2" maxlength="60" show-word-limit />
         </el-form-item>
-        <el-form-item v-if="!editIsBase" label="内部名称（可选）">
+        <el-form-item v-if="!editIsBase" label="Internal name (optional)">
           <el-input
             v-model="editNewKey"
             maxlength="32"
             show-word-limit
-            placeholder="仅自定义心情可改 key；改名会迁移诱饵"
+            placeholder="Only custom moods can change the key; renaming migrates bait."
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmEdit">保存</el-button>
+        <el-button @click="editVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="confirmEdit">Save</el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 删除心情（含回退策略） =============== -->
     <el-dialog v-model="delVisible" :width="'min(520px,92vw)'" align-center>
-      <template #header><strong>删除心情</strong></template>
+      <template #header><strong>Delete Mood</strong></template>
       <div style="margin: 4px 0 12px">
-        确定要删除「<strong>{{ delLabel }}</strong
-        >」吗？
+        Are you sure you want to delete "<strong>{{ delLabel }}</strong>"?
         <div style="margin-top: 6px; font-size: 12px; color: var(--el-text-color-secondary)">
-          该心情下的诱饵将被处理：你可以选择全部删除，或把“只属于该心情”的诱饵迁移到另一个心情。
+          Bait under this mood will be handled: delete them all, or move bait unique to this mood to another one.
         </div>
       </div>
       <el-form label-width="108px">
-        <el-form-item label="处理方式">
+        <el-form-item label="Action">
           <el-radio-group v-model="delStrategy">
-            <el-radio label="drop-bait">删除这些诱饵</el-radio>
-            <el-radio label="assign-fallback">迁移到其他心情</el-radio>
+            <el-radio label="drop-bait">Delete these bait cards</el-radio>
+            <el-radio label="assign-fallback">Move to another mood</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="delStrategy === 'assign-fallback'" label="迁移目标">
-          <el-select v-model="delFallback" style="width: 280px" placeholder="选择回退心情">
+        <el-form-item v-if="delStrategy === 'assign-fallback'" label="Move target">
+          <el-select v-model="delFallback" style="width: 280px" placeholder="Choose a fallback mood">
             <el-option
               v-for="v in fallbackOptions"
               :key="v"
@@ -420,28 +419,28 @@ const removeBait = (id: number) => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="delVisible = false">取消</el-button>
+        <el-button @click="delVisible = false">Cancel</el-button>
         <el-button type="danger" @click="confirmDelete">
-          <el-icon style="margin-right: 6px"><DeleteIcon /></el-icon> 删除
+          <el-icon style="margin-right: 6px"><DeleteIcon /></el-icon> Delete
         </el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 新增诱饵 =============== -->
     <el-dialog v-model="baitAddVisible" :width="'min(520px,92vw)'" align-center>
-      <template #header><strong>添加诱饵</strong></template>
+      <template #header><strong>Add Bait</strong></template>
       <el-form label-width="88px">
-        <el-form-item label="标题">
+        <el-form-item label="Title">
           <el-input
             v-model="baitTitle"
             maxlength="60"
             show-word-limit
-            placeholder="如：先喝一杯水 / 收拾桌面 2 分钟"
+            placeholder="Eg: Drink a glass of water / Tidy the desk for 2 minutes"
             @keyup.enter="confirmAddBait"
           />
         </el-form-item>
-        <el-form-item label="心情">
-          <el-select v-model="baitMood" style="width: 280px" placeholder="选择心情">
+        <el-form-item label="Mood">
+          <el-select v-model="baitMood" style="width: 280px" placeholder="Choose a mood">
             <el-option
               v-for="c in catalog.moodCards"
               :key="c.value"
@@ -452,61 +451,61 @@ const removeBait = (id: number) => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="baitAddVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmAddBait">添加</el-button>
+        <el-button @click="baitAddVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="confirmAddBait">Add</el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 管理诱饵（当前心情） =============== -->
     <el-dialog v-model="manageVisible" :width="'min(680px,96vw)'" align-center>
       <template #header>
-        <strong>管理诱饵</strong>
+        <strong>Manage Bait</strong>
         <span style="margin-left: 8px; font-weight: 400; color: var(--el-text-color-secondary)">
-          （当前：{{ catalog.getMeta(selected).label || selected }}）
+          (Current: {{ catalog.getMeta(selected).label || selected }})
         </span>
       </template>
 
-      <div v-if="baitsOfSelected.length === 0" class="empty">暂无诱饵，先添加一个吧～</div>
+      <div v-if="baitsOfSelected.length === 0" class="empty">No bait yet; add one to get started!</div>
 
       <el-table v-else :data="baitsOfSelected" border style="width: 100%">
-        <el-table-column prop="title" label="标题" min-width="260" />
-        <el-table-column prop="mood" label="心情" min-width="180">
+        <el-table-column prop="title" label="Title" min-width="260" />
+        <el-table-column prop="mood" label="Mood" min-width="180">
           <template #default="{ row }">
             <el-tag v-for="m in row.mood" :key="m" style="margin-right: 6px; margin-bottom: 4px">
               {{ catalog.getMeta(m).label || m }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="center">
+        <el-table-column label="Actions" width="160" align="center">
           <template #default="{ row }">
             <el-button size="small" text type="primary" @click="openEditBait(row.id)">
-              <el-icon style="margin-right: 4px"><EditPen /></el-icon> 编辑
+              <el-icon style="margin-right: 4px"><EditPen /></el-icon> Edit
             </el-button>
             <el-button size="small" text type="danger" @click="removeBait(row.id)">
-              <el-icon style="margin-right: 4px"><DeleteIcon /></el-icon> 删除
+              <el-icon style="margin-right: 4px"><DeleteIcon /></el-icon> Delete
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <template #footer>
-        <el-button @click="manageVisible = false">关闭</el-button>
+        <el-button @click="manageVisible = false">Close</el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 编辑诱饵 =============== -->
     <el-dialog v-model="baitEditVisible" :width="'min(560px,92vw)'" align-center>
-      <template #header><strong>编辑诱饵</strong></template>
+      <template #header><strong>Edit Bait</strong></template>
       <el-form label-width="88px">
-        <el-form-item label="标题">
+        <el-form-item label="Title">
           <el-input v-model="baitEditTitle" maxlength="60" show-word-limit />
         </el-form-item>
-        <el-form-item label="心情">
+        <el-form-item label="Mood">
           <el-select
             v-model="baitEditMoods"
             multiple
             style="width: 360px"
-            placeholder="选择一个或多个心情"
+            placeholder="Select one or more moods"
           >
             <el-option
               v-for="c in catalog.moodCards"
@@ -518,8 +517,8 @@ const removeBait = (id: number) => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="baitEditVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmEditBait">保存</el-button>
+        <el-button @click="baitEditVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="confirmEditBait">Save</el-button>
       </template>
     </el-dialog>
   </div>

@@ -37,7 +37,7 @@ export function useReroll(options: UseRerollOptions) {
    * 用于页面层面的键绑定（例如倒计时的本地持久化主键）
    */
   function currentKey(): string {
-    type B = { title?: string; mood?: readonly (string | import('@/entities/mood').MoodKey)[] }
+    type B = { title?: string; mood?: readonly (string | import('@/entities/mood').UIMood)[] }
 
     const b = (getCurrentBait?.() ?? null) as B | null
     if (!b) return ''
@@ -47,7 +47,7 @@ export function useReroll(options: UseRerollOptions) {
     const moods = Array.from(
       new Set(
         (b.mood ?? [])
-          .map((m: string | import('@/entities/mood').MoodKey) => resolver(String(m)))
+          .map((m: string | import('@/entities/mood').UIMood) => resolver(String(m)))
           .filter((x): x is string => Boolean(x))
       )
     ).sort()

@@ -1,5 +1,5 @@
 // src/features/mood-baits/constants/mood.ts
-import type { MoodKey } from '@/entities/mood'
+import type { UIMood as MoodKey } from '@/entities/mood'
 
 export type MoodMeta = {
   label: string
@@ -10,33 +10,33 @@ export type MoodMeta = {
 /** 与 UIMood 完全一一对应的元数据常量 */
 export const MOOD_META: Record<MoodKey, MoodMeta> = {
   'low-energy': {
-    label: '精力见底',
+    label: 'Energy depleted',
     icon: '🔋5%',
-    sub: '像手机只剩 5% 电量，动一下都吃力。',
+    sub: 'Like a phone stuck at 5% battery; every move feels heavy.',
   },
   anxious: {
-    label: '焦虑糊成一团',
+    label: 'Anxious and frazzled',
     icon: '😵‍💫',
-    sub: '脑子在打转，总担心“要完了”。',
+    sub: 'Mind spinning, constantly worried the worst is coming.',
   },
   overwhelmed: {
-    label: '被事情压住',
+    label: 'Buried by tasks',
     icon: '🧱',
-    sub: '信息太多，不知道第一步从哪儿开始。',
+    sub: 'Too much input, no idea where to take the first step.',
   },
   distracted: {
-    label: '注意力到处飞',
+    label: 'Attention scattered',
     icon: '🪁',
-    sub: '开了十个标签页，一个都没做完。',
+    sub: 'Ten tabs open and not a single one finished.',
   },
   'low-mood': {
-    label: '心情低落',
+    label: 'Feeling low',
     icon: '🌧️',
-    sub: '提不起兴趣，做什么都没意思。',
+    sub: 'No spark of interest; everything feels pointless.',
   },
   good: {
-    label: '不错，想挑战',
+    label: 'Ready for a challenge',
     icon: '🚀',
-    sub: '有点劲儿，想推进点像样的东西。',
+    sub: 'Got some momentum and want to push something meaningful forward.',
   },
 }

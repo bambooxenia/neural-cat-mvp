@@ -13,7 +13,7 @@
   >
     <!-- 仅在有当前奖励时渲染头部 -->
     <template #header v-if="reward.current">
-      <div class="dlg-title">🎉 好棒！</div>
+      <div class="dlg-title">🎉 Great job!</div>
     </template>
 
     <!-- 仅在有当前奖励时渲染主体 -->
@@ -33,8 +33,8 @@
     <!-- 仅在有当前奖励时渲染底部按钮 -->
     <template #footer v-if="reward.current">
       <div class="dlg-footer">
-        <el-button @click="onDismiss">暂时不要</el-button>
-        <el-button type="primary" @click="onAccept">收下奖励</el-button>
+        <el-button @click="onDismiss">Maybe later</el-button>
+        <el-button type="primary" @click="onAccept">Claim reward</el-button>
       </div>
     </template>
   </el-dialog>

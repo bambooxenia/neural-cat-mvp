@@ -1,18 +1,18 @@
 <!-- src/app/layout/MainLayout.vue -->
 <template>
   <div class="layout">
-    <!-- 顶部栏（无首页链接与标题） -->
+    <!-- Topbar (no home link or title) -->
     <header class="topbar safe-top" aria-label="App Topbar">
       <div class="topbar-left" aria-hidden="true"></div>
-      <div class="top-actions"><!-- 右侧预留 --></div>
+      <div class="top-actions"><!-- right slot --></div>
     </header>
 
-    <!-- 页面内容 -->
+    <!-- Page content -->
     <main class="page">
       <router-view />
     </main>
 
-    <!-- 底部导航 -->
+    <!-- Bottom tabbar -->
     <nav class="tabbar safe-bottom" role="navigation" aria-label="Main Tabs">
       <button
         v-for="t in tabs"
@@ -29,22 +29,19 @@
       </button>
     </nav>
   </div>
-</template>
+  </template>
 
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 
-/** —— 基础标题 —— */
-const BASE_TITLE = '神经猫咪'
+// Base title
+const BASE_TITLE = 'Neural Cat'
 
-/** —— 特性开关（后续功能）——
- *  false：禁用（置灰不可点击）
- *  若希望直接隐藏，可在模板中用 tabs.filter(canGo)
- */
+// Feature flags (future features)
 const FEATURE_FLAGS: Record<Tab['key'], boolean> = {
-  home: true,       // 永远启用
-  records: true,    // 永远启用
+  home: true,
+  records: true,
   tools: true,
   community: true,
   account: true,
@@ -56,30 +53,29 @@ type Tab = {
   to: To
   label: string
   icon: string
-  /** 可选：自定义匹配（兜底用，优先使用 meta.tab） */
   match?: (path: string) => boolean
 }
 
 const router = useRouter()
 const route = useRoute()
 
-/** —— 底部页签 —— */
+// Bottom tabs
 const tabs: Tab[] = [
-  { key: 'home',      to: { name: 'home.index' },             label: '首页', icon: '🏠', match: p => p.startsWith('/home') },
-  { key: 'records',   to: { path: '/records/sticker-wall' },  label: '记录', icon: '📖', match: p => p.startsWith('/records') },
-  { key: 'tools',     to: { name: 'tools.pomodoro' },         label: '工具', icon: '🛠️', match: p => p.startsWith('/tools') },
-  { key: 'community', to: { name: 'community.share' },        label: '社区', icon: '👥', match: p => p.startsWith('/community') },
-  { key: 'account',   to: { name: 'account.index' },          label: '我的', icon: '👤', match: p => p.startsWith('/account') },
+  { key: 'home',      to: { name: 'home.index' },             label: 'Home',      icon: '🏠',  match: p => p.startsWith('/home') },
+  { key: 'records',   to: { path: '/records/sticker-wall' },  label: 'Records',   icon: '📖',  match: p => p.startsWith('/records') },
+  { key: 'tools',     to: { name: 'tools.pomodoro' },         label: 'Tools',     icon: '🛠️', match: p => p.startsWith('/tools') },
+  { key: 'community', to: { name: 'community.share' },        label: 'Community', icon: '👥',  match: p => p.startsWith('/community') },
+  { key: 'account',   to: { name: 'account.index' },          label: 'Account',   icon: '👤',  match: p => p.startsWith('/account') },
 ]
 
-/** 目标路由是否可达 */
+// Availability
 const canGo = (t: Tab) => {
   if (t.key in FEATURE_FLAGS && !FEATURE_FLAGS[t.key]) return false
   if ('name' in t.to) return router.hasRoute(t.to.name)
   return true
 }
 
-/** 是否处于激活状态 */
+// Active state
 const isActive = (t: Tab) => {
   const tab = route.meta?.tab as Tab['key'] | undefined
   if (tab) return tab === t.key
@@ -90,10 +86,10 @@ const isActive = (t: Tab) => {
   return curr === base || curr.startsWith(base + '/')
 }
 
-/** 导航 */
+// Navigate
 const go = (t: Tab) => router.push(t.to).catch(() => {})
 
-/** 文档标题：无 title 时回退到基础标题 */
+// Document title
 watch(
   () => route.meta?.title as string | undefined,
   (title) => { document.title = title ? `${BASE_TITLE} · ${title}` : BASE_TITLE },
@@ -115,7 +111,7 @@ watch(
   background: var(--bg, #fff);
 }
 
-/* 顶部栏（无标题/无首页链接） */
+/* Topbar */
 .topbar {
   position: sticky;
   top: 0;
@@ -129,13 +125,13 @@ watch(
   border-bottom: var(--border);
   z-index: 10;
 }
-.topbar-left { width: 1px; height: 1px; } /* 占位，保持两端对齐 */
+.topbar-left { width: 1px; height: 1px; }
 .top-actions { display: flex; align-items: center; gap: 8px; }
 
-/* 内容区（为底部导航留出空间） */
+/* Page content */
 .page { padding: 12px 12px calc(var(--layout-footer-h) + 12px); }
 
-/* 底部 Tab 栏 */
+/* Tabbar */
 .tabbar {
   position: sticky;
   bottom: 0;
@@ -164,16 +160,16 @@ watch(
 .tab .icon { font-size: 18px; line-height: 1; }
 .tab.active { color: #111; font-weight: 600; }
 
-/* 未注册/不可用时的样式与可达性 */
 .tab.disabled { opacity: .45; cursor: not-allowed; }
 
-/* 安全区适配 */
+/* Safe areas */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 .safe-top { padding-top: env(safe-area-inset-top); }
 
-/* 大屏微调 */
+/* Wide */
 @media (min-width: 768px) {
   .layout { max-width: 720px; margin: 0 auto; border-left: var(--border); border-right: var(--border); }
   .page { padding-left: 16px; padding-right: 16px; }
 }
 </style>
+

@@ -2,10 +2,10 @@ import type { Domain } from '@/entities/task'
 
 /** 任务卡的“类型”默认集合（UI 可增删） */
 export const DEFAULT_TASK_TYPES: string[] = [
-  '学习外语',
-  '整理环境',
-  '日记写作',
-  '轻运动',
+  'Foreign Language Study',
+  'Environment Tidy-Up',
+  'Journal Writing',
+  'Light Exercise',
 ]
 
 /**
@@ -14,10 +14,10 @@ export const DEFAULT_TASK_TYPES: string[] = [
  * 你可以按实际类型名继续扩展或拆分。
  */
 export const TYPE_TO_DOMAINS: Record<string, Domain[]> = {
-  '学习外语': ['study'],
-  '整理环境': ['clean'],
-  '日记写作': ['write'],
-  '轻运动': ['move'],
+  'Foreign Language Study': ['study'],
+  'Environment Tidy-Up': ['clean'],
+  'Journal Writing': ['write'],
+  'Light Exercise': ['move'],
 }
 
 export type NewTaskInput = {

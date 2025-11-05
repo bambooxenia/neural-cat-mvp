@@ -82,19 +82,19 @@ const openAdd = () => {
 }
 const confirmAdd = async () => {
   const name = addName.value.trim()
-  if (!name) return ElMessage.warning('请输入类型名称')
+  if (!name) return ElMessage.warning('Please enter a type name.')
   const res = await catalog.addTaskType(name)
   if (!res.ok) {
     const map: Record<string, string> = {
-      empty: '名称不能为空',
-      too_long: '名称过长（最多 16 字）',
-      duplicated: '该类型已存在',
+      empty: 'Name cannot be empty.',
+      too_long: 'Name is too long (max 16 characters).',
+      duplicated: 'This type already exists.',
     }
-    return ElMessage.warning(map[res.reason ?? ''] || '添加失败')
+    return ElMessage.warning(map[res.reason ?? ''] || 'Failed to add.')
   }
   selected.value = name
   addVisible.value = false
-  ElMessage.success('已添加类型')
+  ElMessage.success('Type added.')
 }
 
 /* ------------------------------- 编辑类型 ------------------------------- */
@@ -110,19 +110,19 @@ const openEdit = (name: string) => {
 const confirmEdit = async () => {
   const oldName = (editingName.value || '').trim()
   const newName = (editNewName.value || '').trim()
-  if (!newName) return ElMessage.warning('名称不能为空')
+  if (!newName) return ElMessage.warning('Name cannot be empty.')
   const res = await catalog.renameTaskType(oldName, newName)
   if (!res.ok) {
     const map: Record<string, string> = {
-      too_long: '名称过长（最多 16 字）',
-      duplicated: '该名称已存在',
-      invalid: '无效的名称',
+      too_long: 'Name is too long (max 16 characters).',
+      duplicated: 'That name already exists.',
+      invalid: 'Invalid name.',
     }
-    return ElMessage.warning(map[res.reason ?? ''] || '保存失败')
+    return ElMessage.warning(map[res.reason ?? ''] || 'Failed to save.')
   }
   if (selected.value === oldName) selected.value = newName
   editVisible.value = false
-  ElMessage.success('已保存')
+  ElMessage.success('Saved.')
 }
 
 /* ------------------------------- 删除类型 ------------------------------- */
@@ -130,7 +130,7 @@ const delVisible = ref(false)
 const delName = ref('')
 
 const openDelete = async (name: string) => {
-  if (catalog.taskTypes.length <= 1) return ElMessage.info('至少保留一个类型哦')
+  if (catalog.taskTypes.length <= 1) return ElMessage.info('Keep at least one type.')
   delName.value = name
   delVisible.value = true
 }
@@ -139,13 +139,13 @@ const confirmDelete = async () => {
   if (!name) return (delVisible.value = false)
   if (catalog.taskTypes.length <= 1) {
     delVisible.value = false
-    return ElMessage.info('至少保留一个类型哦')
+    return ElMessage.info('Keep at least one type.')
   }
   await catalog.removeTaskType(name)
   if (selected.value === name) selected.value = catalog.taskTypes[0] || ''
   delVisible.value = false
   navigator?.vibrate?.(10)
-  ElMessage.success('已删除')
+  ElMessage.success('Deleted.')
 }
 
 /* ------------------------------- 新增任务 ------------------------------- */
@@ -171,7 +171,7 @@ watch(taskTypeSel, () => {
 })
 
 const openAddTask = () => {
-  if (!selected.value) return ElMessage.info('请先选择一个类型')
+  if (!selected.value) return ElMessage.info('Please select a type first.')
   taskTitle.value = ''
   taskMinutes.value = 5
   taskTypeSel.value = selected.value
@@ -184,11 +184,11 @@ const openAddTask = () => {
 
 const confirmAddTask = async () => {
   const title = taskTitle.value.trim()
-  if (!title) return ElMessage.warning('请填写任务标题')
-  if (!taskTypeSel.value) return ElMessage.warning('请选择类型')
+  if (!title) return ElMessage.warning('Please enter a task title.')
+  if (!taskTypeSel.value) return ElMessage.warning('Please choose a type.')
 
   // 对有映射的类型，要求必须选择领域；无映射则不校验 domain（store 已放行）
-  if (hasMapping.value && !taskDomainSel.value) return ElMessage.warning('请选择任务领域')
+  if (hasMapping.value && !taskDomainSel.value) return ElMessage.warning('Please choose a task domain.')
 
   const res = await catalog.addUserTask({
     title,
@@ -198,18 +198,18 @@ const confirmAddTask = async () => {
   } as any)
   if (!res.ok) {
     const map: Record<string, string> = {
-      empty_title: '标题不能为空',
-      title_too_long: '标题过长（最多 60 字）',
-      invalid_minutes: '时长不合法（仅支持 5 / 10 分钟）',
-      unknown_type: '未知的类型，请重试',
-      invalid_domain_for_type: '该领域不属于此类型',
+      empty_title: 'Title cannot be empty.',
+      title_too_long: 'Title is too long (max 60 characters).',
+      invalid_minutes: 'Duration is invalid (only 5 or 10 minutes supported).',
+      unknown_type: 'Unknown type. Please try again.',
+      invalid_domain_for_type: 'This domain does not belong to the selected type.',
     }
-    return ElMessage.error(map[res.reason ?? ''] || '添加失败')
+    return ElMessage.error(map[res.reason ?? ''] || 'Failed to add task.')
   }
 
   taskAddVisible.value = false
   navigator?.vibrate?.(10)
-  ElMessage.success('已添加任务')
+  ElMessage.success('Task added.')
 }
 
 /* -------------------------- 任务管理（编辑/删除） -------------------------- */
@@ -246,7 +246,7 @@ const openEditTask = (row: any) => {
 const confirmEditTask = async () => {
   if (!taskEditId.value) return
   const title = taskEditTitle.value.trim()
-  if (!title) return ElMessage.warning('标题不能为空')
+  if (!title) return ElMessage.warning('Title cannot be empty.')
 
   if (taskEditSource.value === 'base') {
     // 编辑内置：覆盖（仅当该类型有映射时才限制 domain；store 会二次校验）
@@ -259,7 +259,7 @@ const confirmEditTask = async () => {
         ...(TYPE_TO_DOMAINS[selected.value] ? { domain: taskEditDomain.value as Domain } : {})
       }
     )
-    if (!ok.ok) return ElMessage.error('保存失败')
+    if (!ok.ok) return ElMessage.error('Failed to save.')
   } else {
     // 编辑自建
     const res = await catalog.updateUserTask(taskEditId.value, {
@@ -268,11 +268,11 @@ const confirmEditTask = async () => {
       typeTag: taskEditType.value,
       ...(TYPE_TO_DOMAINS[taskEditType.value] ? { domain: taskEditDomain.value as Domain } : {})
     })
-    if (!res.ok) return ElMessage.error('保存失败')
+    if (!res.ok) return ElMessage.error('Failed to save.')
   }
 
   taskEditVisible.value = false
-  ElMessage.success('已保存')
+  ElMessage.success('Saved.')
 }
 
 const removeTask = async (row: any) => {
@@ -281,29 +281,29 @@ const removeTask = async (row: any) => {
   } else {
     await catalog.removeUserTask(row.id)
   }
-  ElMessage.success('已删除')
+  ElMessage.success('Deleted.')
 }
 </script>
 
 <template>
   <div class="m-page">
-    <PageHeader title="先选一个任务类型">
+    <PageHeader title="Pick a task type first">
       <template #extra>
         <el-button text type="primary" @click="openAdd">
-          <el-icon style="margin-right:4px"><Plus /></el-icon> 添加任务类型
+          <el-icon style="margin-right:4px"><Plus /></el-icon> Add Task Type
         </el-button>
         <el-button text type="primary" :disabled="!selected" @click="openAddTask">
-          <el-icon style="margin-right:4px"><EditPen /></el-icon> 添加任务
+          <el-icon style="margin-right:4px"><EditPen /></el-icon> Add Task
         </el-button>
         <el-button text type="primary" :disabled="!selected" @click="openManageTasks">
-          <el-icon style="margin-right:4px"><List /></el-icon> 管理任务
+          <el-icon style="margin-right:4px"><List /></el-icon> Manage Tasks
         </el-button>
       </template>
     </PageHeader>
 
     <div class="badges" style="margin:4px 2px 8px">
-      <span class="tag tag--ok">可点选/编辑</span>
-      <span class="tag tag--warn">右滑或删除按钮可删除</span>
+      <span class="tag tag--ok">Tap to select/edit</span>
+      <span class="tag tag--warn">Swipe right or use Delete to remove</span>
     </div>
 
     <!-- 类型宫格（对齐 Mood 的可编辑卡片思路） -->
@@ -318,14 +318,14 @@ const removeTask = async (row: any) => {
         @contextmenu.prevent
       >
         <div class="tile-title">{{ t }}</div>
-        <div class="tile-desc">5–10 分钟小行动</div>
+        <div class="tile-desc">5–10 minute mini action</div>
 
         <div class="tile-actions">
           <el-button text type="primary" size="small" @click.stop="openEdit(t)">
-            <el-icon style="margin-right:4px"><EditPen /></el-icon> 编辑
+            <el-icon style="margin-right:4px"><EditPen /></el-icon> Edit
           </el-button>
           <el-button text type="danger" size="small" @click.stop="openDelete(t)">
-            <el-icon style="margin-right:4px"><DeleteIcon /></el-icon> 删除
+            <el-icon style="margin-right:4px"><DeleteIcon /></el-icon> Delete
           </el-button>
         </div>
       </el-card>
@@ -333,7 +333,7 @@ const removeTask = async (row: any) => {
 
     <el-empty
       v-if="!catalog.taskTypes.length"
-      description="还没有任何类型，点右上角「添加任务类型」吧"
+      description='No types yet - tap "Add Task Type" in the top right.'
       style="margin-top:12px"
     />
 
@@ -345,84 +345,84 @@ const removeTask = async (row: any) => {
         :class="{ 'is-breathing': breathing }"
         @click="goNext"
       >
-        按「{{ selected || '选择类型' }}」开始
+        Start with "{{ selected || 'Select type' }}"
       </button>
     </div>
 
     <!-- =============== 新增类型 =============== -->
     <el-dialog v-model="addVisible" :width="'min(520px,92vw)'" align-center>
-      <template #header><strong>添加任务类型</strong></template>
+      <template #header><strong>Add Task Type</strong></template>
       <el-form label-width="108px">
-        <el-form-item label="类型名称">
+        <el-form-item label="Type name">
           <el-input
             v-model="addName"
             maxlength="16"
             show-word-limit
-            placeholder="例如：写小说 / 学习外语 ..."
+            placeholder="e.g., Write fiction / Learn a language ..."
             @keyup.enter="confirmAdd"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addVisible=false">取消</el-button>
-        <el-button type="primary" @click="confirmAdd">添加</el-button>
+        <el-button @click="addVisible=false">Cancel</el-button>
+        <el-button type="primary" @click="confirmAdd">Add</el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 编辑类型 =============== -->
     <el-dialog v-model="editVisible" :width="'min(560px,92vw)'" align-center>
-      <template #header><strong>编辑任务类型</strong></template>
+      <template #header><strong>Edit Task Type</strong></template>
       <el-form label-width="108px">
-        <el-form-item label="类型名称">
+        <el-form-item label="Type name">
           <el-input v-model="editNewName" maxlength="16" show-word-limit />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible=false">取消</el-button>
-        <el-button type="primary" @click="confirmEdit">保存</el-button>
+        <el-button @click="editVisible=false">Cancel</el-button>
+        <el-button type="primary" @click="confirmEdit">Save</el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 删除类型确认 =============== -->
     <el-dialog v-model="delVisible" :width="'min(520px,92vw)'" align-center>
-      <template #header><strong>删除类型</strong></template>
+      <template #header><strong>Delete Type</strong></template>
       <div style="margin:4px 0 12px">
-        确定要删除「<strong>{{ delName }}</strong>」吗？该类型下自建任务将被移除。
+        Delete "<strong>{{ delName }}</strong>"? All custom tasks under this type will be removed.
       </div>
       <template #footer>
-        <el-button @click="delVisible=false">取消</el-button>
+        <el-button @click="delVisible=false">Cancel</el-button>
         <el-button type="danger" @click="confirmDelete">
-          <el-icon style="margin-right:6px"><DeleteIcon /></el-icon> 删除
+          <el-icon style="margin-right:6px"><DeleteIcon /></el-icon> Delete
         </el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 新增任务 =============== -->
     <el-dialog v-model="taskAddVisible" :width="'min(520px,92vw)'" align-center>
-      <template #header><strong>添加任务</strong></template>
+      <template #header><strong>Add Task</strong></template>
       <el-form label-width="88px">
-        <el-form-item label="标题">
+        <el-form-item label="Title">
           <el-input
             v-model="taskTitle"
             maxlength="60"
             show-word-limit
-            placeholder="如：写 400 字 / 快速列大纲"
+            placeholder="e.g., Write 400 words / Draft a quick outline"
             @keyup.enter="confirmAddTask"
           />
         </el-form-item>
-        <el-form-item label="时长">
+        <el-form-item label="Duration">
           <el-radio-group v-model="taskMinutes">
-            <el-radio-button :label="5">5 分钟</el-radio-button>
-            <el-radio-button :label="10">10 分钟</el-radio-button>
+            <el-radio-button :label="5">5 min</el-radio-button>
+            <el-radio-button :label="10">10 min</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="taskTypeSel" style="width: 280px" placeholder="选择类型">
+        <el-form-item label="Type">
+          <el-select v-model="taskTypeSel" style="width: 280px" placeholder="Choose a type">
             <el-option v-for="t in catalog.taskTypes" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="hasMapping" label="领域">
-          <el-select v-model="taskDomainSel" style="width: 280px" placeholder="选择领域">
+        <el-form-item v-if="hasMapping" label="Domain">
+          <el-select v-model="taskDomainSel" style="width: 280px" placeholder="Choose a domain">
             <el-option
               v-for="d in domainsForType"
               :key="d"
@@ -433,53 +433,53 @@ const removeTask = async (row: any) => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="taskAddVisible=false">取消</el-button>
-        <el-button type="primary" @click="confirmAddTask">添加</el-button>
+        <el-button @click="taskAddVisible=false">Cancel</el-button>
+        <el-button type="primary" @click="confirmAddTask">Add</el-button>
       </template>
     </el-dialog>
 
     <!-- =============== 管理任务（当前类型） =============== -->
     <el-dialog v-model="manageVisible" :width="'min(680px,96vw)'" align-center>
       <template #header>
-        <strong>管理任务</strong>
+        <strong>Manage Tasks</strong>
         <span style="margin-left:8px;font-weight:400;color:var(--el-text-color-secondary)">
-          （当前：{{ selected || '未选择' }}）
+          (Current: {{ selected || 'None selected' }})
         </span>
       </template>
 
-      <div v-if="tasksOfSelected.length === 0" class="empty">暂无任务，先添加一个吧～</div>
+      <div v-if="tasksOfSelected.length === 0" class="empty">No tasks yet - add one to get started!</div>
 
       <el-table v-else :data="tasksOfSelected" border style="width:100%">
-        <el-table-column prop="title" label="标题" min-width="260" />
-        <el-table-column prop="minutes" label="时长" width="100">
-          <template #default="{ row }">{{ row.minutes }} 分钟</template>
+        <el-table-column prop="title" label="Title" min-width="260" />
+        <el-table-column prop="minutes" label="Duration" width="100">
+          <template #default="{ row }">{{ row.minutes }} min</template>
         </el-table-column>
         <el-table-column
           v-if="TYPE_TO_DOMAINS[selected]?.length"
           prop="domain"
-          label="领域"
+          label="Domain"
           min-width="120"
         />
-        <el-table-column label="来源" width="100" align="center">
+        <el-table-column label="Source" width="100" align="center">
           <template #default="{ row }">
-            <el-tag type="info" v-if="row.source==='base'">内置</el-tag>
-            <el-tag type="success" v-else>自建</el-tag>
+            <el-tag type="info" v-if="row.source==='base'">Built-in</el-tag>
+            <el-tag type="success" v-else>Custom</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="center">
+        <el-table-column label="Actions" width="160" align="center">
           <template #default="{ row }">
             <el-button size="small" text type="primary" @click="openEditTask(row)">
-              <el-icon style="margin-right:4px"><EditPen /></el-icon> 编辑
+              <el-icon style="margin-right:4px"><EditPen /></el-icon> Edit
             </el-button>
             <el-button size="small" text type="danger" @click="removeTask(row)">
-              <el-icon style="margin-right:4px"><DeleteIcon /></el-icon> 删除
+              <el-icon style="margin-right:4px"><DeleteIcon /></el-icon> Delete
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <template #footer>
-        <el-button @click="manageVisible = false">关闭</el-button>
+        <el-button @click="manageVisible = false">Close</el-button>
       </template>
     </el-dialog>
   </div>

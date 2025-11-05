@@ -19,7 +19,7 @@ defineOptions({ name: 'JournalEditPage' })
 const router = useRouter()
 const summary = useNCJournalSummaryStore()
 
-/** 允许下一次导航通过离开守卫（用于“确认离开”后放行一次） */
+// Allow bypassing the leave guard once (after user confirms)
 const allowLeaveOnce = ref(false)
 
 type JournalMode = 'free' | 'template'
@@ -29,7 +29,7 @@ function setMode(m: JournalMode) {
   setLS(LS.journalMode, m)
 }
 
-/** 文本与草稿 */
+// Editor content and draft persistence (template mode)
 const text = ref('')
 const draftKey = LS.journalDraftTemplate ?? 'nc:journal:draft:template'
 let draftTimer: number | null = null
@@ -56,21 +56,21 @@ function renderTemplateSkeleton(): string {
   const tpl = getTemplateSpec(DEFAULT_TEMPLATE_ID)
   const dayKeyLocal = todayDayKeyLocal()
   if (tpl?.renderLocalDraft) return tpl.renderLocalDraft({ dayKeyLocal, notes: [] })
-  return `# ${formatDayKeyLocalSlash(dayKeyLocal)}\n\n## 🗓️ 奇蹟日終記錄｜\n`
+  return `# ${formatDayKeyLocalSlash(dayKeyLocal)}\n\n## Miracle Daily Wrap-up (draft)\n`
 }
 
-/** 切换模式（已移除“追加模板骨架？”确认流程） */
+// Switch mode between free-note and template-note
 async function onModeChange(next: JournalMode) {
   setMode(next)
   if (next === 'template') {
-    // 仅在当前为空时生成骨架；否则保持现有内容不变（不再追加模板）
+    // If empty, initialize template skeleton and persist draft
     if (!text.value.trim()) {
       text.value = renderTemplateSkeleton()
       setLS(draftKey, text.value)
     }
     await nextTick()
   } else {
-    // 自由模式：清空并移除草稿
+    // Free mode clears template draft content
     text.value = ''
     setLS(draftKey, '')
     await nextTick()
@@ -79,12 +79,12 @@ async function onModeChange(next: JournalMode) {
 
 const canSubmit = computed(() => text.value.trim().length > 0)
 
-/** 提交：写入 Summary → 触发奖励事件 → 清草稿 → 返回贴纸墙 */
+// Submit: write Summary(final), broadcast reward event, clear draft, and go back
 async function add() {
   const t = text.value.trim()
   if (!t) return
 
-  // 入库到“总结/日记”集合
+  // Persist final summary
   summary.addFinal({
     text: t,
     dayKeyLocal: todayDayKeyLocal(),
@@ -92,18 +92,18 @@ async function add() {
     templateVersion: 1,
   })
 
-  // 广播奖励事件（RewardCenter 会弹贴纸）
+  // Broadcast journal-created event (RewardCenter will enqueue sticker)
   logJournalCreated({
     dayKeyLocal: toDayKeyLocal(new Date()),
     source: mode.value, // 'free' | 'template'
     length: t.length,
   })
 
-  // 清草稿与输入
+  // Clear draft and input
   if (mode.value === 'template') setLS(draftKey, '')
   text.value = ''
 
-  // 返回贴纸墙（使用命名路由；失败再兜底路径）
+  // Navigate back to sticker wall
   try {
     await router.replace({ name: 'records.sticker-wall' })
   } catch {
@@ -111,7 +111,7 @@ async function add() {
   }
 }
 
-/** —— 中置对话框：离开编辑确认 —— */
+// Leave confirmation dialog control
 const showLeaveDialog = ref(false)
 let pendingTo: RouteLocationRaw | null = null
 
@@ -121,7 +121,7 @@ function confirmLeave() {
   showLeaveDialog.value = false
   allowLeaveOnce.value = true
   if (to) router.replace(to).finally(() => {
-    // 导航完成后复位许可（双保险）
+    // Reset guard after navigation completes
     allowLeaveOnce.value = false
   })
 }
@@ -130,22 +130,22 @@ function cancelLeaveDialog() {
   showLeaveDialog.value = false
 }
 
-// 软拦截：弹中置对话框，而不是浏览器 confirm
-onBeforeRouteLeave((to, _from, next) => {
-  if (allowLeaveOnce.value) {
-    allowLeaveOnce.value = false
-    return next()
-  }
-  if (!text.value.trim()) return next()
-  showLeaveDialog.value = true
+// Route leave guard: show dialog if there are unsaved changes
+onBeforeRouteLeave((to) => {
+  if (allowLeaveOnce.value) return true
+  const dirty = mode.value === 'template'
+    ? getLS(draftKey, '').trim() !== ''
+    : text.value.trim() !== ''
+  if (!dirty) return true
   pendingTo = to
-  next(false)
+  showLeaveDialog.value = true
+  return false
 })
 </script>
 
 <template>
   <div class="m-page">
-    <PageHeader title="新增奇迹日记" />
+    <PageHeader title="Miracle Journal" />
 
     <div class="mode">
       <button
@@ -154,7 +154,7 @@ onBeforeRouteLeave((to, _from, next) => {
         @click="onModeChange('free')"
         :aria-pressed="mode === 'free'"
       >
-        自由记录
+        Free note
       </button>
       <button
         class="pill"
@@ -162,7 +162,7 @@ onBeforeRouteLeave((to, _from, next) => {
         @click="onModeChange('template')"
         :aria-pressed="mode === 'template'"
       >
-        模板记录
+        Template note
       </button>
     </div>
 
@@ -171,15 +171,15 @@ onBeforeRouteLeave((to, _from, next) => {
         class="editor"
         v-model="text"
         rows="12"
-        placeholder="写下今天的小奇迹吧～（Ctrl/⌘ + Enter 提交）"
+        placeholder="Write your journal here... Press Ctrl/Cmd + Enter to submit."
         @input="mode === 'template' && saveDraftDebounced()"
         @keydown.ctrl.enter.prevent="add"
         @keydown.meta.enter.prevent="add"
       />
-      <button class="btn" :disabled="!canSubmit" @click="add">记录</button>
+      <button class="btn" :disabled="!canSubmit" @click="add">Save</button>
     </div>
 
-    <!-- 中置对话框：离开确认 -->
+    <!-- Leave confirmation dialog -->
     <Teleport to="body">
       <div
         v-if="showLeaveDialog"
@@ -197,17 +197,17 @@ onBeforeRouteLeave((to, _from, next) => {
         @click.stop
       >
         <div class="dlg-body">
-          <div class="dlg-title" id="leave-title">确定要离开吗？</div>
-          <p class="dlg-desc">当前还有未提交内容（草稿已自动保存，下次可继续）。</p>
+          <div class="dlg-title" id="leave-title">Leave this page?</div>
+          <p class="dlg-desc">You have unsaved changes. Drafts in template mode are auto-saved locally.</p>
         </div>
         <div class="dlg-actions">
-          <button class="seg-btn seg-btn--outline" @click="confirmLeave">离开</button>
-          <button class="seg-btn seg-btn--solid" @click="cancelLeaveDialog">继续填写</button>
+          <button class="seg-btn seg-btn--outline" @click="confirmLeave">Leave</button>
+          <button class="seg-btn seg-btn--solid" @click="cancelLeaveDialog">Continue editing</button>
         </div>
       </div>
     </Teleport>
   </div>
-</template>
+  </template>
 
 <style scoped>
 .m-page {
@@ -216,7 +216,7 @@ onBeforeRouteLeave((to, _from, next) => {
   padding: 12px;
 }
 
-/* 顶部模式切换（与其它页统一的胶囊风格） */
+/* Mode switch controls */
 .mode { display: flex; gap: 8px; margin: 8px 0 10px; }
 .pill {
   border: 1px solid #eaecef; background: #fff; border-radius: 999px;
@@ -240,7 +240,7 @@ onBeforeRouteLeave((to, _from, next) => {
 }
 .btn:disabled { opacity: .5; cursor: not-allowed }
 
-/* 胶囊分段按钮（用于对话框底部操作与其它场景统一） */
+/* Segmented buttons in dialog footer */
 .seg-btn{
   border:1px solid #eaecef; background:#fff; color:#606266;
   border-radius:999px; padding:8px 12px;
@@ -251,7 +251,7 @@ onBeforeRouteLeave((to, _from, next) => {
 .seg-btn--outline{ background:#fff; border-color:#eaecef; color:#606266 }
 .seg-btn:disabled{ opacity:.5; cursor:not-allowed }
 
-/* 中置对话框（与详情页一致的轻量样式） */
+/* Center dialog */
 .dlg-mask{
   position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 300;
 }
@@ -271,3 +271,4 @@ onBeforeRouteLeave((to, _from, next) => {
 }
 @keyframes dlgIn { from { transform: translate(-50%, -48%); opacity:.6 } to { transform: translate(-50%, -50%); opacity:1 } }
 </style>
+

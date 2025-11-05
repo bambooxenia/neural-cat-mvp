@@ -1,4 +1,4 @@
-import type { MoodKey } from '@/entities/mood'
+import type { UIMood as MoodKey } from '@/entities/mood'
 
 export type HomeStateMeta = {
   /** 猫咪人格化台词（首页顶部展示） */
@@ -14,38 +14,38 @@ export type HomeStateMeta = {
 /** 与 6 种默认情绪一一对应的首页状态池 */
 export const HOME_STATE_META: Record<MoodKey, HomeStateMeta> = {
   'low-energy': {
-    line: '🐱「我只有 5% 电了…翻个身都累喵」',
-    action: '先投一条小鱼干，唤醒一点点注意力',
+    line: '🐱 "I have only 5% battery left... even rolling over feels exhausting, meow."',
+    action: 'Offer a small fish snack first to wake up a bit of focus.',
     recEntry: 'mood',
     icon: '🐟',
   },
   anxious: {
-    line: '😿「毛线团打结了，我已经开始咬电线了…」',
-    action: '从最小的一步解开毛线团',
+    line: '😿 "The yarn ball is in knots and I have started chewing the cables..."',
+    action: 'Untangle the yarn starting with the tiniest step.',
     recEntry: 'breakdown',
     icon: '🧶',
   },
   overwhelmed: {
-    line: '🙀「一堆箱子压着我，动不了啦…」',
-    action: '先拆出一个最小的箱子开始',
+    line: '🙀 "A pile of boxes is pressing me down; I cannot move..."',
+    action: 'Open the smallest box first to get going.',
     recEntry: 'breakdown',
     icon: '📦',
   },
   distracted: {
-    line: '😼「我刚追蝴蝶，又盯小鱼干，还想挠毛线…」',
-    action: '先随缘抽一张小卡片，锁定一件事',
+    line: '😼 "I just chased a butterfly, stared at the fish snack, and still want to claw the yarn..."',
+    action: 'Draw a random mini card to lock onto one task first.',
     recEntry: 'tasks',
     icon: '🎯',
   },
   'low-mood': {
-    line: '🥶「像没解冻的鱼，我啥都不想干…」',
-    action: '不急，窝在壁炉旁吃小鱼干，慢慢暖起来',
+    line: '🥶 "I feel like an unthawed fish; nothing sounds appealing..."',
+    action: 'Do not rush—curl up by the fireplace with a fish snack and warm up slowly.',
     recEntry: 'mood',
     icon: '🔥',
   },
   good: {
-    line: '🐈「像打了猫薄荷，冲啊喵～」',
-    action: '拆个任务、推进一大步，再去记录今天的闪光',
+    line: '🐈 "Catnip boost! Charge ahead, meow~"',
+    action: "Break down a task, make a big push, then record today's highlights.",
     recEntry: 'breakdown', // 或者拆分后再跳 Journal
     icon: '🚀',
   },

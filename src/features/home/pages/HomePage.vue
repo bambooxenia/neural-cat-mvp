@@ -3,7 +3,7 @@
   <div class="m-page safe-bottom">
     <!-- S1 品牌标题（中文 + 英文副标） -->
     <header class="m-hd brand">
-      <h1 class="m-title">神经猫咪</h1>
+      <h1 class="m-title">Neural Cat</h1>
       <p class="m-en" aria-hidden="true">Neural Cat</p>
     </header>
 
@@ -11,7 +11,7 @@
     <section class="section">
       <h2 class="sec-title primary">
         <span class="bar" aria-hidden="true"></span>
-        今天猫咪的心情是
+        Today's cat mood is
       </h2>
 
       <div
@@ -53,7 +53,7 @@
     <section class="section">
       <h2 class="sec-title">
         <span class="dot" aria-hidden="true">●</span>
-        我现在就要开始一步步前进
+        I'm ready to move forward step by step
       </h2>
 
       <div
@@ -73,12 +73,12 @@
               <div class="hero-title">
                 {{
                   unfinished.breakdown
-                    ? `继续拆分：${unfinished.title || '上次的小目标'}`
-                    : '从最小的一步开始'
+                    ? `Keep breaking it down: ${unfinished.title || 'Last mini goal'}`
+                    : 'Start with the tiniest step'
                 }}
               </div>
               <div class="hero-desc" id="hero-desc">
-                用AI把任务拆成令人发指的小步骤，一步一步向前走
+                Use AI to break tasks into outrageously tiny steps and move forward one by one
               </div>
             </div>
           </div>
@@ -90,7 +90,7 @@
     <section class="section">
       <h2 class="sec-title">
         <span class="dot" aria-hidden="true">●</span>
-        我还可以这样开始
+        I can also start this way
       </h2>
 
       <div class="grid-2">
@@ -108,8 +108,9 @@
           <el-card shadow="never" class="card-reset">
             <div class="tile-emoji" aria-hidden="true">🌤️</div>
             <div class="tile-title">Mood Bait</div>
-            <div class="tile-sub">心情诱饵</div>
-            <div class="tile-desc" id="moodbait-desc">不知道怎么开始？先选个心情，找回切口</div>
+            <div class="tile-desc" id="moodbait-desc">
+              Not sure how to begin? Pick a mood first to find your way in.
+            </div>
           </el-card>
         </div>
 
@@ -126,9 +127,10 @@
         >
           <el-card shadow="never" class="card-reset">
             <div class="tile-emoji" aria-hidden="true">🎴</div>
-            <div class="tile-title">Task Card</div>
-            <div class="tile-sub">任务抽卡</div>
-            <div class="tile-desc" id="taskcard-desc">选个小任务随缘开始一天也不错哦！</div>
+            <div class="tile-title">Task card draw</div>
+            <div class="tile-desc" id="taskcard-desc">
+              Grab a small task at random to start the day—it works great!
+            </div>
           </el-card>
         </div>
       </div>
@@ -146,7 +148,7 @@
 import { ElCard } from 'element-plus'
 import { useRouter } from 'vue-router'
 import type { Directive } from 'vue'
-import type { MoodKey } from '@/entities/mood'
+import type { UIMood as MoodKey } from '@/entities/mood'
 import { HOME_STATE_META } from '@/features/home/constants/homeState'
 
 const router = useRouter()
@@ -208,7 +210,9 @@ const unfinished = {
 }
 
 /** —— S2：台词、胶囊、推荐（含 icon） —— */
-const moodLine = unfinished.any ? '🐾 欢迎回来！上次的进度还在，咱们接着来～' : state.line
+const moodLine = unfinished.any
+  ? "🐾 Welcome back! Your last progress is still here—let's keep going!"
+  : state.line
 
 type Rec = 'breakdown' | 'mood' | 'tasks' | 'journal'
 const recEntry: Rec =
@@ -217,24 +221,24 @@ const recEntry: Rec =
   (unfinished.tasks && 'tasks') ||
   state.recEntry
 
-const chipText = unfinished.any ? '继续上次' : '猫咪推荐'
+const chipText = unfinished.any ? 'Resume last time' : "Cat's pick"
 
 const recTitle = unfinished.any
-  ? '继续上次'
+  ? 'Resume last time'
   : recEntry === 'breakdown'
-  ? '从最小的一步开始'
+  ? 'Start with the tiniest step'
   : recEntry === 'mood'
-  ? '先喂条小鱼干'
+  ? 'Feed a small fish snack first'
   : recEntry === 'tasks'
-  ? '抽一张小卡片'
-  : '记录一下今天'
+  ? 'Draw a small card'
+  : 'Log today'
 
 const recDesc = unfinished.any
   ? unfinished.breakdown
-    ? `回到上次的拆分：${unfinished.title || '未命名任务'}`
+    ? `Return to the last breakdown: ${unfinished.title || 'Untitled task'}`
     : unfinished.mood
-    ? '继续从心情诱饵唤醒注意力'
-    : '继续处理刚才抽到的任务卡'
+    ? 'Keep using mood bait to wake up your focus'
+    : 'Keep working on the task card you just drew'
   : state.action
 
 /** 推荐行动 icon：续接优先 ⏯️，否则按内容使用当前心情的 icon（不与 S3/S4 重复） */
@@ -341,11 +345,18 @@ const vBreath: Directive<HTMLElement> = {
   margin: 0 0 clamp(8px, 2.6vw, 12px);
   color: #222;
 }
-.sec-title .dot {
-  font-size: 14px;
-  color: #8b5cf6;
-  transform: translateY(-1px);
-}
+  .sec-title .dot {
+    /* Hide corrupt inline char and render bullet via pseudo */
+    font-size: 0;
+    position: relative;
+  }
+  .sec-title .dot::before {
+    content: '•';
+    font-size: 14px;
+    color: #8b5cf6;
+    transform: translateY(-1px);
+    display: inline-block;
+  }
 .sec-title.primary .bar {
   width: 8px;
   height: clamp(18px, 5.2vw, 22px);
@@ -511,9 +522,9 @@ const vBreath: Directive<HTMLElement> = {
   min-height: clamp(84px, 22vw, 116px);
   position: relative;
 }
-.tile-emoji {
-  font-size: clamp(22px, 6.4vw, 30px);
-}
+  .tile-emoji {
+    font-size: clamp(22px, 6.4vw, 30px);
+  }
 .tile-title {
   margin-top: 6px;
   font-weight: 900;
