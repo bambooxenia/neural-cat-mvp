@@ -5,16 +5,16 @@
     <PageHeader>
       <template #extra>
         <div class="badges">
-          <span class="tag tag--ok">贴纸总数：{{ sticker.stickers.length }} 枚</span>
-          <span class="tag tag--warn">今日贴纸：{{ todayCount }} 枚</span>
+          <span class="tag tag--ok">Sum of stickers{{ sticker.stickers.length }} </span>
+          <span class="tag tag--warn">Stickers for today{{ todayCount }} </span>
         </div>
       </template>
     </PageHeader>
 
     <!-- 顶部子页签 -->
-    <nav class="seg-tabs" role="tablist" aria-label="记录导航">
+    <nav class="seg-tabs" role="tablist" aria-label="Records Navigation">
       <button class="seg-item active" role="tab" aria-selected="true" tabindex="0" v-breath>
-        爪印墙
+        Stickers Wall
       </button>
       <button
         class="seg-item"
@@ -24,7 +24,7 @@
         @click="goHistory"
         v-breath
       >
-        时间轴
+        Timeline
       </button>
       <button
         class="seg-item"
@@ -34,7 +34,7 @@
         @click="goAnalytics"
         v-breath
       >
-        数据分析
+        Analytics
       </button>
     </nav>
 
@@ -45,7 +45,7 @@
           <div class="g-title">{{ g.label }}</div>
 
           <template v-if="g.stickers.length">
-            <div class="g-subtitle">爪印墙</div>
+            <div class="g-subtitle">Sticker wall</div>
             <div
               class="paw-grid"
               :style="{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }"
@@ -56,7 +56,7 @@
                 class="sticker"
                 :title="s.kaomoji"
                 role="img"
-                :aria-label="`贴纸 ${s.kaomoji}`"
+                :aria-label="`Sticker ${s.kaomoji}`"
               >
                 <div class="kaomoji">{{ s.kaomoji }}</div>
               </div>
@@ -70,12 +70,12 @@
             </div>
           </template>
 
-          <div v-if="g.journal.length" class="g-subtitle">奇迹日记</div>
+          <div v-if="g.journal.length" class="g-subtitle">Miracle Journal</div>
           <div v-if="g.journal.length" class="g-card">
             <ul class="j-list">
               <li v-for="j in g.journal" :key="j.id" class="j-item">
                 <button class="j-link" @click="goDetail(j.id)" v-breath>
-                  奇迹日记 {{ formatLocalDateSlash(dateFromDayKeyLocal(j.dayKeyLocal)) }}
+                  Miracle Journal {{ formatLocalDateSlash(dateFromDayKeyLocal(j.dayKeyLocal)) }}
                 </button>
                 <span class="j-time" v-if="j.createdAtISO">
                   （{{
@@ -93,9 +93,9 @@
 
       <template v-else>
         <div class="empty">
-          还没有任何记录，先写一条奇迹日记吧～
+          No records yet. Start by adding your first Miracle Journal!
           <div class="empty-actions">
-            <button class="btn" @click="goNew" v-breath>添加奇迹日记</button>
+            <button class="btn" @click="goNew" v-breath>Add Miracle Journal</button>
           </div>
         </div>
       </template>
@@ -103,8 +103,8 @@
 
     <!-- 悬浮主 CTA（不越界） -->
     <div class="floating-cta">
-      <button class="cta-btn" @click="goNew" v-breath aria-label="添加奇迹日记">
-        ✨ 添加奇迹日记
+      <button class="cta-btn" @click="goNew" v-breath aria-label="Add Miracle Journal">
+        ✨ Add Miracle Journal
       </button>
     </div>
   </div>
@@ -190,10 +190,10 @@ function dateLabel(key: string) {
   const [y, m, d] = key.split('-').map(Number)
   const dt = new Date(y, m - 1, d)
   const today = new Date()
-  if (sameDay(dt, today)) return '今天'
+  if (sameDay(dt, today)) return 'Today'
   const yst = new Date(today)
   yst.setDate(today.getDate() - 1)
-  if (sameDay(dt, yst)) return '昨天'
+  if (sameDay(dt, yst)) return 'Yesterday'
   return `${y} / ${m} / ${d}`
 }
 /** 将 dayKeyLocal 转为 Date（用于模板展示） */

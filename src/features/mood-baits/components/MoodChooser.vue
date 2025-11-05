@@ -139,7 +139,7 @@ const canDelete = computed(() => (props.cards?.length || 0) > (props.minKeep ?? 
       <!-- 操作区（桌面显式/移动隐藏，或外部强制 showActions） -->
       <div class="m-actions" :class="{ show: showOps }" @click.stop>
         <el-button text size="small" type="primary" @click="onClickEdit($event, c.value)">
-          <el-icon style="margin-right: 4px"><EditPen /></el-icon> 编辑
+          <el-icon style="margin-right: 4px"><EditPen /></el-icon> edit
         </el-button>
         <el-button
           text
@@ -148,14 +148,12 @@ const canDelete = computed(() => (props.cards?.length || 0) > (props.minKeep ?? 
           :disabled="!canDelete"
           @click="onClickDelete($event, c.value)"
         >
-          <el-icon style="margin-right: 4px"><DeleteIcon /></el-icon> 删除
+          <el-icon style="margin-right: 4px"><DeleteIcon /></el-icon> delete
         </el-button>
       </div>
 
       <!-- 已选标记（弱提示，真正的“选中”由样式体现） -->
-      <div class="m-check" aria-hidden="true">
-        {{ selected === c.value ? '已选择' : '点击选择' }}
-      </div>
+      
     </button>
   </div>
 </template>

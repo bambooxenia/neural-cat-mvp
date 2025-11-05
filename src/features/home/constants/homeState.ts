@@ -46,7 +46,7 @@ export const HOME_STATE_META: Record<MoodKey, HomeStateMeta> = {
   good: {
     line: '🐈 "Catnip boost! Charge ahead, meow~"',
     action: "Break down a task, make a big push, then record today's highlights.",
-    recEntry: 'breakdown', // 或者拆分后再跳 Journal
+    recEntry: 'breakdown', 
     icon: '🚀',
   },
 }

@@ -53,7 +53,7 @@
     <section class="section">
       <h2 class="sec-title">
         <span class="dot" aria-hidden="true">●</span>
-        I'm ready to move forward step by step
+        I'm ready to move forward step by step!
       </h2>
 
       <div
